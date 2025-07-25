@@ -1,17 +1,24 @@
 import asyncio
+import os
 from typing import Optional
 from contextlib import AsyncExitStack
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from fastmcp.client.transports import StreamableHttpTransport
 from fastmcp import Client
+from fastmcp.client.sampling import (
+    SamplingMessage,
+    SamplingParams,
+    RequestContext,
+)
 
 from anthropic import Anthropic
 from openai import OpenAI, APIConnectionError
 from dotenv import load_dotenv
 import json
 
-load_dotenv()  # load environment variables from .env
+load_dotenv()
 
 class MCPClient:
     def __init__(self):
@@ -20,13 +27,23 @@ class MCPClient:
         self.exit_stack = AsyncExitStack()
         self.anthropic = Anthropic()
         self.openai = OpenAI(
-            api_key="AIzaSyCe1EG3kbbxFaM8KMnNj7eK3Qc7iq2qbQo",
+            api_key = os.getenv("GOOGLE_API_KEY")
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         )
         self.messages = []
         self.instruction = "you are helpful!"
 
-    async def connect_to_server(self, server_script_path: str = None,server_url=None,config=None:
+    async def sampling_handler(self,
+        messages: list[SamplingMessage],
+        params: SamplingParams,
+        context: RequestContext
+    ) -> str:
+        return "ok!"
+
+    async def progress_handler(self,progress: float, total: float | None, message: str | None):
+        print(f"Progress: {progress}/{total} - {message}")
+
+    async def connect_to_server(self, server_script_path: str = None,server_url=None,config=None):
         """Connect to an MCP server
         
         Args:
@@ -57,12 +74,21 @@ class MCPClient:
             print("\nConnected to server with tools:", [tool.name for tool in tools])
 
         elif config:
-            print("Connecting via SSE...")
-            self.session = await self.exit_stack.enter_async_context(Client(config))
+            self.session = await self.exit_stack.enter_async_context(Client(
+                config,
+                progress_handler=self.progress_handler,
+                sampling_handler=self.sampling_handler,
+                ))
             print("Connected!")
+
         elif server_url:
-            print("Connecting via SSE...")
-            self.session = await self.exit_stack.enter_async_context(Client(server_url))
+            print("Connecting via Streamable Http Transport...")
+            transport = StreamableHttpTransport(url=server_url)
+            self.session = await self.exit_stack.enter_async_context(Client(
+                server_url,
+                progress_handler=self.progress_handler,
+                sampling_handler=self.sampling_handler,
+                ))
             print("Connected!")
             
 
@@ -95,7 +121,7 @@ class MCPClient:
                 raise # Re-raise other exceptions immediately
 
 
-    async def process_query(self, query: str) -> str:
+    async def process_query(self, query: str, session) -> str:
         """Process a query using Claude and available tools"""
         self.messages.append(
             {
@@ -104,7 +130,7 @@ class MCPClient:
             }
         )
 
-        tools_list = await self.session.list_tools()
+        tools_list = await session.list_tools()
         available_tools = [{ 
             "type":"function",
             "function":{
@@ -173,7 +199,7 @@ class MCPClient:
                 if query.lower() == 'quit':
                     break
                     
-                response = await self.process_query(query)
+                response = await self.process_query(query,self.session)
                 print("\n" + response)
                     
             except Exception as e:
@@ -190,7 +216,10 @@ async def main():
         
     client = MCPClient()
     try:
-        await client.connect_to_server(server_url="https://qyaqrlzjl4dkhldivdy2mwovga0wtuwe.lambda-url.us-west-2.on.aws/")
+        with open('config.json') as file:
+            config = json.load(file)
+        # await client.connect_to_server(config=config)
+        await client.connect_to_server(config=config)
         await client.chat_loop()
     finally:
         await client.cleanup()

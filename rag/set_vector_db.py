@@ -21,7 +21,7 @@ def generate_stable_id(content: str) -> str:
 
 def embed_content(contents: list[str]) -> dict:
     if not contents or not isinstance(contents, list):
-        raise ValueError("Input must be a non-empty list of strings.")
+        raise ValueError("input must be a non-empty list of strings.")
 
     ids = [generate_stable_id(doc) for doc in contents]
 
@@ -58,7 +58,6 @@ def save_tools_to_vector_db(tools:list):
     try:
         collection_name = "tools"
         
-        print("Step 1: Checking for existing tools in the database...")
         chroma_client = chromadb.PersistentClient(path="./chroma_db")
         collection = chroma_client.get_or_create_collection(name=collection_name)
 
@@ -67,7 +66,7 @@ def save_tools_to_vector_db(tools:list):
         existing_ids_response = collection.get(ids=all_ids)
         existing_ids = set(existing_ids_response['ids'])
         
-        print(f"Found {len(existing_ids)} tools already in the database.")
+        print(f"round {len(existing_ids)} tools already in the database.")
 
         tools_to_embed = [
             doc for doc in tools 
@@ -75,15 +74,15 @@ def save_tools_to_vector_db(tools:list):
         ]
 
         if tools_to_embed:
-            print(f"\nStep 2: Preparing and embedding {len(documents_to_embed)} new tool(s).")
             db_ready_data = embed_content(tools_to_embed)
             upsert_to_chroma(db_ready_data, collection_name)
         else:
-            print("\nStep 2: No new tools to add. Database is already up-to-date.")
+            print(" no new tools to add. Database is already uptodate.")
 
         final_count = collection.count()
-        print(f"\nVerification: The collection '{collection.name}' now contains a total of {final_count} items.")
-        print("\n--- Process Complete ---")
+        print(f"the collection '{collection.name}' now contains a total of {final_count} items.")
 
     except Exception as e:
         print(f"An error occurred: {e}")
+
+save_tools_to_vector_db(['this is okay','this is bad'])
