@@ -186,7 +186,7 @@ class MCPClient:
         )
 
         mcp_tools_list = await session.list_tools()
-        embedding_ready_tools = self.format_mcp_tools_for_db(tools_list)
+        embedding_ready_tools = self.format_mcp_tools_for_db(mcp_tools_list)
         save_tools_to_vector_db(embedding_ready_tools)
         relevant_tools = get_relevant_tools_for_chat(self.messages,'tools',0.76)
 
@@ -199,7 +199,7 @@ class MCPClient:
                 "description": tool.description,
                 "parameters": tool.inputSchema
                 }
-        } for tool in tools_list if tool.name in relevant_tools]
+        } for tool in mcp_tools_list if tool.name in relevant_tools]
         
         final_text = []
         is_response_ready = False
