@@ -27,7 +27,7 @@ def embed_query(query_text: str) -> list[float]:
 
 def retrieve_semantic_tools(query: str, collection_name: str, distance_threshold: float = 0.6) -> list[str]:
     """
-    Takes a query and retrieves the most semantically similar
+    takes a query and retrieves the most semantically similar
     tools from the specified chromaDB collection.
     """
     query_embedding = embed_query(query)
@@ -45,26 +45,29 @@ def retrieve_semantic_tools(query: str, collection_name: str, distance_threshold
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=100
+        n_results=100,
+        include=["metadatas", "distances"]
     )
-    retrieved_docs = results['documents'][0]
+    retrieved_metadatas = results['metadatas'][0]
     distances = results['distances'][0]
     
-    relevant_tools = []
-    for i, doc in enumerate(retrieved_docs):
+    relevant_tool_names = []
+    for i, metadata in enumerate(retrieved_metadatas):
         distance = distances[i]
+        tool_name = metadata.get('tool_name', 'Unknown Tool')
+
         if distance < distance_threshold:
-            print(f"  -> Found relevant tool: '{doc.splitlines()[0]}' (Distance: {distance:.4f}) - ACCEPTED")
-            relevant_tools.append(doc)
+            print(f"  -> Found relevant tool: '{tool_name}' (Distance: {distance:.4f}) - ACCEPTED")
+            relevant_tool_names.append(tool_name)
         else:
-            # This part is just for clear logging, you can remove it in production
-            print(f"  -> Found tool: '{doc.splitlines()[0]}' (Distance: {distance:.4f}) - REJECTED (Threshold: {distance_threshold})")
+            print(f"  -> Found tool: '{tool_name}' (Distance: {distance:.4f}) - REJECTED (Threshold: {distance_threshold})")
+            pass
 
-    return relevant_tools
+    return relevant_tool_names
 
 
 
-def get_relevant_tools_for_chat(chat_history: list[dict], collection_name: str, distance_threshold: float = 0.6) -> list[str]:
+def get_relevant_tools_for_chat(chat_history: list[dict], collection_name: str, distance_threshold: float = 0.784) -> list[str]:
     """
     finds relevant tools by embedding the context of the entire chat history.
     """

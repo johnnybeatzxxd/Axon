@@ -16,7 +16,11 @@ from fastmcp.client.sampling import (
 from anthropic import Anthropic
 from openai import OpenAI, APIConnectionError
 from dotenv import load_dotenv
+from typing import List, Dict, Any
 import json
+
+from rag.set_vector_db import save_tools_to_vector_db
+from rag.retrieve_tools import get_relevant_tools_for_chat
 
 load_dotenv()
 
@@ -27,11 +31,62 @@ class MCPClient:
         self.exit_stack = AsyncExitStack()
         self.anthropic = Anthropic()
         self.openai = OpenAI(
-            api_key = os.getenv("GOOGLE_API_KEY")
+            api_key = os.getenv("GOOGLE_API_KEY"),
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         )
         self.messages = []
         self.instruction = "you are helpful!"
+
+    def format_mcp_tools_for_db(self,tools: List[Any]) -> List[Dict[str, str]]:
+        """
+        Parses a list of mcp tool objects and formats them into a clean
+        list of dicts 
+        """
+        formatted_data = []
+        for tool in tools:
+            name = tool.name
+            description = tool.description or "No description provided for this tool."
+            
+            parameters_list = []
+            input_schema = tool.inputSchema or {}
+            properties = input_schema.get('properties', {})
+            required_params = set(input_schema.get('required', [])) # Use a set for fast lookups
+
+            for param_name, details in properties.items():
+                param_type = details.get('type', 'any')
+                is_required = "required" if param_name in required_params else "optional"
+                
+                param_str = f"{param_name} ({param_type}, {is_required})"
+                
+                # add default value to the string if it exists
+                if 'default' in details:
+                    default_val = details['default']
+                    if isinstance(default_val, str) and default_val:
+                        param_str += f", default='{default_val}'"
+                    elif isinstance(default_val, str) and not default_val:
+                         param_str += ", default=''" 
+                    else:
+                        param_str += f", default={default_val}"
+                
+                parameters_list.append(param_str)
+
+            if parameters_list:
+                params_section = "\nParameters: " + ", ".join(parameters_list)
+            else:
+                params_section = "\nParameters: None"
+
+            document_string = (
+                f"Tool: {name}\n"
+                f"Description: {description}"
+                f"{params_section}"
+            )
+            
+            formatted_data.append({
+                "name": name,
+                "document": document_string
+            })
+
+        return formatted_data
 
     async def sampling_handler(self,
         messages: list[SamplingMessage],
@@ -130,7 +185,13 @@ class MCPClient:
             }
         )
 
-        tools_list = await session.list_tools()
+        mcp_tools_list = await session.list_tools()
+        embedding_ready_tools = self.format_mcp_tools_for_db(tools_list)
+        save_tools_to_vector_db(embedding_ready_tools)
+        relevant_tools = get_relevant_tools_for_chat(self.messages,'tools',0.76)
+
+        print("Tools Provided:",relevant_tools)
+
         available_tools = [{ 
             "type":"function",
             "function":{
@@ -138,7 +199,7 @@ class MCPClient:
                 "description": tool.description,
                 "parameters": tool.inputSchema
                 }
-        } for tool in tools_list]
+        } for tool in tools_list if tool.name in relevant_tools]
         
         final_text = []
         is_response_ready = False

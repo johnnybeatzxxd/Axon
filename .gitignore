@@ -1,2 +1,3 @@
 /chroma_db
 .env
+/rag/__pycache__/

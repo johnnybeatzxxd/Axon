@@ -1,15 +1,7 @@
 {
 "mcpServers": {
-    "filesystem": {
-        "command": "npx",
-        "args": [
-            "-y",
-            "@modelcontextprotocol/server-filesystem",
-            "/home/johnnybeatz/MyFiles/codes/backend"
-        ]
-    },
-    "check_the_light": {
-        "name":"check_the_light",
+    "smart_home": {
+        "name":"smart_home",
         "url": "http://localhost:8000/mcp"
     }
 }
