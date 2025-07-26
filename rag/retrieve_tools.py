@@ -45,7 +45,7 @@ def retrieve_semantic_tools(query: str, collection_name: str, distance_threshold
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=10
+        n_results=100
     )
     retrieved_docs = results['documents'][0]
     distances = results['distances'][0]
@@ -78,12 +78,12 @@ if __name__ == "__main__":
         chat_history = [
     {'role': 'user', 'content': 'That last task was tough.'},
     {'role': 'assistant', 'content': 'I can imagine! Glad we got through it.'},
-    {'role': 'user', 'content': 'Yeah, me too. Anyway, thanks for your help.'}
+    {'role': 'user', 'content': 'Yeah, me too. Anyway, how are we doing this month'}
         ]
 
         
-        contextual_tools = get_relevant_tools_for_chat(chat_history, tool_collection, distance_threshold=0.73)
-        # contextual_tools = retrieve_semantic_tools(str(chat_history), tool_collection, distance_threshold=0.73)
+        contextual_tools = get_relevant_tools_for_chat(chat_history, tool_collection, distance_threshold=0.784)
+        # contextual_tools = retrieve_semantic_tools(str(chat_history), tool_collection, distance_threshold=0.76)
 
         
         for i, tool in enumerate(contextual_tools, 1):

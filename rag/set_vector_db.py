@@ -53,33 +53,75 @@ def upsert_to_chroma(db_data: dict, collection_name: str, db_path: str = "./chro
     print(f"successfully upserted {len(db_data['ids'])} documents into ChromaDB.")
     return collection
 
-def save_tools_to_vector_db(tools:list):
+def save_tools_to_vector_db(tools: list[str], db_path: str = "./chroma_db"):
+    """
+    saves tools to two vector database collections:
+    'cached_tools': persistent collection of all unique tools ever processed.
+    'tools': temporary collection holding only the new tools from the current run.
+    """
     try:
-        collection_name = "tools"
+        cached_collection_name = "cached_tools"
+        session_collection_name = "tools"
         
-        chroma_client = chromadb.PersistentClient(path="./chroma_db")
-        collection = chroma_client.get_or_create_collection(name=collection_name)
-
-        all_ids = [generate_stable_id(doc) for doc in tools]
+        chroma_client = chromadb.PersistentClient(path=db_path)
         
-        existing_ids_response = collection.get(ids=all_ids)
-        existing_ids = set(existing_ids_response['ids'])
+        cached_collection = chroma_client.get_or_create_collection(name=cached_collection_name)
+        cu = chroma_client.get_or_create_collection(name=cached_collection_name)
         
-        print(f"round {len(existing_ids)} tools already in the database.")
-
-        tools_to_embed = [
-            doc for doc in tools 
-            if generate_stable_id(doc) not in existing_ids
+        all_tool_ids = [generate_stable_id(doc) for doc in tools]
+        
+        existing_in_cache_ids = set(cached_collection.get(ids=all_tool_ids)['ids'])
+        
+        new_tools_to_embed = [
+            doc for i, doc in enumerate(tools) 
+            if all_tool_ids[i] not in existing_in_cache_ids
         ]
+        
+        print(f"Input contains {len(tools)} tools: {len(new_tools_to_embed)} new, {len(existing_in_cache_ids)} existing in cache.")
 
-        if tools_to_embed:
-            db_ready_data = embed_content(tools_to_embed)
-            upsert_to_chroma(db_ready_data, collection_name)
-        else:
-            print(" no new tools to add. Database is already uptodate.")
+        session_tools_data = {"ids": [], "embeddings": [], "documents": []}
+        
+        if new_tools_to_embed:
+            print(f"Embedding {len(new_tools_to_embed)} new tools...")
+            newly_embedded_data = embed_content(new_tools_to_embed)
+            
+            upsert_to_chroma(newly_embedded_data, cached_collection_name, db_path)
+            
+            # add the new tool data to our session data
+            session_tools_data["ids"].extend(newly_embedded_data["ids"])
+            session_tools_data["embeddings"].extend(newly_embedded_data["embeddings"])
+            session_tools_data["documents"].extend(newly_embedded_data["documents"])
 
-        final_count = collection.count()
-        print(f"the collection '{collection.name}' now contains a total of {final_count} items.")
+        if existing_in_cache_ids:
+            print(f"Fetching {len(existing_in_cache_ids)} existing tools from the cache...")
+            # Fetch the full data including embeddings from the cache
+            existing_tools_from_db = cached_collection.get(
+                ids=list(existing_in_cache_ids),
+                include=["embeddings", "documents"]
+            )
+            
+            # add the existing tool data to our session data
+            session_tools_data["ids"].extend(existing_tools_from_db["ids"])
+            session_tools_data["embeddings"].extend(existing_tools_from_db["embeddings"])
+            session_tools_data["documents"].extend(existing_tools_from_db["documents"])
+
+        print(f"Resetting the '{session_collection_name}' collection...")
+        try:
+            chroma_client.delete_collection(name=session_collection_name)
+        except:
+            pass
+        session_collection = chroma_client.get_or_create_collection(name=session_collection_name)
+        
+        upsert_to_chroma(session_tools_data, session_collection_name, db_path)
+
+        final_cache_count = cached_collection.count()
+        final_session_count = session_collection.count()
+        
+        print("-" * 50)
+        print("Operation Complete.")
+        print(f"The '{cached_collection.name}' collection now has {final_cache_count} total unique tools.")
+        print(f"The '{session_collection.name}' collection now has {final_session_count} tools for this session.")
+        print("-" * 50)
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -113,6 +155,6 @@ if __name__ == "__main__":
 # The list of documents is now our tool descriptions
     my_documents = [
         tool_1, tool_2, tool_3, tool_4, tool_5, tool_6, tool_7, tool_8, 
-        tool_9, tool_10, tool_11, tool_12, tool_13, tool_14, tool_15, tool_16
+        tool_9, tool_10, tool_11, tool_12, tool_13,
     ]
     save_tools_to_vector_db(my_documents)
