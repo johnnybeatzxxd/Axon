@@ -17,10 +17,12 @@ from anthropic import Anthropic
 from openai import OpenAI, APIConnectionError
 from dotenv import load_dotenv
 from typing import List, Dict, Any
+import time
 import json
 
 from rag.set_vector_db import save_tools_to_vector_db
 from rag.retrieve_tools import get_relevant_tools_for_chat
+from tools.custom_tools import call_custom_tool
 
 load_dotenv()
 
@@ -35,7 +37,10 @@ class MCPClient:
             base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
         )
         self.messages = []
-        self.instruction = "you are helpful!"
+        self.instruction = "you are helpful assistant! your job is to help user with everything using the tools you have provided. if the tools you provided doesnt allow you to accomplish the task or you need to search for more tools immediately call retrieve_tools function with tags it will give you the right tools to accomplish the task!"
+        self.custom_tools = [{'type': 'function', 'function': {'name': 'retrieve_tools', 'description': "Fetches additional tools that can be used to accomplish your task when the current set of available tools is insufficient. Dont say i dont have functionality or capability!. Use this function to dynamically expand your capabilities by searching for new tools based on specific keywords.", 
+            'parameters': {'properties': {'keywords': {'title': 'keywords', 'type': 'string','description':'A list of atleast three keywords (eg. web_search, calculator, get_weather) name of the functions you need!'}}, 'required': ['keywords'], 'type': 'object'}}}]
+
 
     def format_mcp_tools_for_db(self,tools: List[Any]) -> List[Dict[str, str]]:
         """
@@ -98,7 +103,7 @@ class MCPClient:
     async def progress_handler(self,progress: float, total: float | None, message: str | None):
         print(f"Progress: {progress}/{total} - {message}")
 
-    async def connect_to_server(self, server_script_path: str = None,server_url=None,config=None):
+    async def connect_to_server(self, server_script_path = None,server_url=None,config=None):
         """Connect to an MCP server
         
         Args:
@@ -188,9 +193,7 @@ class MCPClient:
         mcp_tools_list = await session.list_tools()
         embedding_ready_tools = self.format_mcp_tools_for_db(mcp_tools_list)
         save_tools_to_vector_db(embedding_ready_tools)
-        relevant_tools = get_relevant_tools_for_chat(self.messages,'tools',0.76)
-
-        print("Tools Provided:",relevant_tools)
+        relevant_tools = get_relevant_tools_for_chat(self.messages,'tools',0.754)
 
         available_tools = [{ 
             "type":"function",
@@ -200,16 +203,20 @@ class MCPClient:
                 "parameters": tool.inputSchema
                 }
         } for tool in mcp_tools_list if tool.name in relevant_tools]
-        
+
+        available_tools += self.custom_tools
         final_text = []
         is_response_ready = False
+
         while not is_response_ready:
-            response = self.generate_response(self.openai,self.instruction,self.messages,"gemini-2.5-flash",available_tools)
+            response = self.generate_response(self.openai, self.instruction, self.messages, "gemini-2.5-flash", available_tools)
+            restart_while_loop = False  
+
             # Process response and handle tool calls
             for content in response.choices:
                 if content.finish_reason == 'stop':
                     final_text.append(content.message.content)
-                    self.messages.append({"role":"assistant","content":content.message.content})
+                    self.messages.append({"role": "assistant", "content": content.message.content})
                     is_response_ready = True
 
                 elif content.finish_reason == 'tool_calls':
@@ -218,33 +225,64 @@ class MCPClient:
                         tool_name = tool.function.name
                         tool_args = tool.function.arguments
                         tool_id = tool.id
-                    
-                        # Execute tool call
-                        tool_args = json.loads(tool_args)
-                        result = await self.session.call_tool(tool_name, tool_args)
+                        print(tool_args)
+
+                        if any(t['function']['name'] == tool_name for t in self.custom_tools):
+                            # custom tools called
+                            tool_args = json.loads(tool_args)
+                            tool_args["conversations"] = self.messages
+                            cutstom_tool_result = call_custom_tool(tool_name, tool_args)
+                            if tool_name in ['retrieve_tools']:
+                                print('custom tool result:', cutstom_tool_result)
+                                if cutstom_tool_result:
+                                    # Update available tools
+                                    available_tools = [{ 
+                                        "type":"function",
+                                        "function":{
+                                            "name": tool.name,
+                                            "description": tool.description,
+                                            "parameters": tool.inputSchema
+                                            }
+                                    } for tool in mcp_tools_list if tool.name in cutstom_tool_result]
+                                    restart_while_loop = True
+                                    break
+                                else:
+                                    result = 'Tool Not Found!'
+
+                        else:
+                            # Execute mcp tool call
+                            tool_args = json.loads(tool_args)
+                            result = await self.session.call_tool(tool_name, tool_args)
+                            result = result.content
+
                         final_text.append(f"[Calling tool {tool_name} with args {tool_args}]")
 
                         # Continue conversation with tool results
                         self.messages.append({
-                             "role": "assistant",
-                             "tool_calls": [
+                            "role": "assistant",
+                            "tool_calls": [
                                 {
-                                   "function": {
-                                      "arguments": str(tool_args),
-                                      "name": tool_name
-                                   },
-                                   "id": "",
-                                   "type": "function"
+                                    "function": {
+                                        "arguments": str(tool_args),
+                                        "name": tool_name
+                                    },
+                                    "id": tool_id,
+                                    "type": "function"
                                 }
-                             ]
-                          })
+                            ]
+                        })
                         self.messages.append({
-                            "tool_call_id": "",
-                             "role": "tool",
-                             "name": tool_name,
-                             "content": str(result.content)
+                            "tool_call_id": tool_id,
+                            "role": "tool",
+                            "name": tool_name,
+                            "content": str(result)
                         })
 
+                    if restart_while_loop:
+                        break  
+
+            if restart_while_loop:
+                continue  # Restart the while loop from top
 
         return "\n".join(final_text)
 
