@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "anthropic>=0.40.0",
     "chromadb>=1.0.15",
+    "fastapi[all]>=0.116.1",
     "fastmcp>=2.10.6",
     "google-genai>=1.27.0",
     "langchain-text-splitters>=0.3.9",

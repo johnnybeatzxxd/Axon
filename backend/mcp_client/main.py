@@ -12,6 +12,7 @@ from fastmcp.client.sampling import (
     SamplingParams,
     RequestContext,
 )
+from fastapi import WebSocket, WebSocketDisconnect
 
 from anthropic import Anthropic
 from openai import OpenAI, APIConnectionError
@@ -20,9 +21,9 @@ from typing import List, Dict, Any
 import time
 import json
 
-from rag.set_vector_db import save_tools_to_vector_db
-from rag.retrieve_tools import get_relevant_tools_for_chat
-from tools.custom_tools import call_custom_tool
+from .rag.set_vector_db import save_tools_to_vector_db
+from .rag.retrieve_tools import get_relevant_tools_for_chat
+from .tools.custom_tools import call_custom_tool
 
 load_dotenv()
 
@@ -41,6 +42,7 @@ class MCPClient:
         self.custom_tools = [{'type': 'function', 'function': {'name': 'retrieve_tools', 'description': "Fetches additional tools that can be used to accomplish your task when the current set of available tools is insufficient. Dont say i dont have functionality or capability!. Use this function to dynamically expand your capabilities by searching for new tools based on specific keywords.", 
             'parameters': {'properties': {'keywords': {'title': 'keywords', 'type': 'string','description':'A list of atleast three keywords (eg. web_search, calculator, get_weather) name of the functions you need!'}}, 'required': ['keywords'], 'type': 'object'}}}]
 
+        self.websocket: Optional[WebSocket] = None
 
     def format_mcp_tools_for_db(self,tools: List[Any]) -> List[Dict[str, str]]:
         """
@@ -208,6 +210,8 @@ class MCPClient:
         final_text = []
         is_response_ready = False
 
+        await self.websocket.send_json({"log":f"{len(available_tools)} tool are passed!"})
+
         while not is_response_ready:
             response = self.generate_response(self.openai, self.instruction, self.messages, "gemini-2.5-flash", available_tools)
             restart_while_loop = False  
@@ -226,6 +230,7 @@ class MCPClient:
                         tool_args = tool.function.arguments
                         tool_id = tool.id
                         print(tool_args)
+                        await self.websocket.send_json({"log":f"Calling tool {tool_name} with {tool_args} args"})
 
                         if any(t['function']['name'] == tool_name for t in self.custom_tools):
                             # custom tools called
@@ -286,23 +291,31 @@ class MCPClient:
 
         return "\n".join(final_text)
 
-    async def chat_loop(self):
+    async def chat_loop(self,websocket:WebSocket | None = None):
         """Run an interactive chat loop"""
         print("\nMCP Client Started!")
         print("Type your queries or 'quit' to exit.")
         
         while True:
             try:
-                query = input("\nQuery: ").strip()
-                
+                if websocket:
+                    self.websocket = websocket
+                    await websocket.send_json({"message":"Waiting for a message"})
+                    data = await websocket.receive_json()
+                    query = data.get("message")                
+
+                else:
+                    query = input("User: ")
                 if query.lower() == 'quit':
                     break
                     
                 response = await self.process_query(query,self.session)
                 print("\n" + response)
+                await websocket.send_json({"response":response})
                     
-            except Exception as e:
-                print(f"\nError: {str(e)}")
+            except WebSocketDisconnect:
+                print(f"User left!")
+                return
     
     async def cleanup(self):
         """Clean up resources"""
