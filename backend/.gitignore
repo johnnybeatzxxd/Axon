@@ -1,3 +1,5 @@
 /chroma_db
 .env
 *__pycache__/
+
+.*
