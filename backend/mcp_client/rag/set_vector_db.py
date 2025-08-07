@@ -8,8 +8,12 @@ from google.genai import types
 from dotenv import load_dotenv
 
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
 
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if gemini_api_key:
+    del os.environ["GEMINI_API_KEY"]
+
+api_key = os.getenv("GOOGLE_API_KEY")
 if not api_key:
     raise ValueError("GOOGLE_API_KEY not found. Please set it in your .env file.")
 
