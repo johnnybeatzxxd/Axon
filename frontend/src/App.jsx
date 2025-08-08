@@ -7,7 +7,8 @@ import LibraryPage from './pages/LibraryPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
-  const [isNavCollapsed, setIsNavCollapsed] = useState(false)
+  const [isNavCollapsed, setIsNavCollapsed] = useState(true)
+  const [isNavPinned, setIsNavPinned] = useState(false)
   const [conversations, setConversations] = useState([
     { id: 'design', title: 'Design Tips', lastMessage: 'Let’s refine dark gradients', updatedAt: Date.now() - 5000 },
   ])
@@ -200,6 +201,21 @@ function App() {
         onReorderFolders={handleReorderFolders}
         isCollapsed={isNavCollapsed}
         onToggleCollapsed={() => setIsNavCollapsed((v) => !v)}
+        isPinned={isNavPinned}
+        onPin={() => {
+          setIsNavPinned(true)
+          setIsNavCollapsed(false)
+        }}
+        onUnpin={() => {
+          setIsNavPinned(false)
+          setIsNavCollapsed(true)
+        }}
+        onHoverEnter={() => {
+          if (!isNavPinned) setIsNavCollapsed(false)
+        }}
+        onHoverLeave={() => {
+          if (!isNavPinned) setIsNavCollapsed(true)
+        }}
         onDeleteFolder={handleDeleteFolder}
       />
 
