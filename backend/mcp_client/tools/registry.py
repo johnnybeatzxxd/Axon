@@ -6,7 +6,6 @@ from . import custom_tools
 REGISTRY: dict[str, Callable[..., Any]] = {
     name: fn
     for name, fn in vars(custom_tools).items()
-    if callable(fn) and name not in {"call_custom_tool"}
 }
 
 

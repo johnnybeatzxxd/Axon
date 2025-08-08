@@ -7,7 +7,6 @@ from .tooling import format_mcp_tools_for_db, build_available_tools
 from ..rag.set_vector_db import save_tools_to_vector_db
 from ..rag.retrieve_tools import get_relevant_tools_for_chat
 from ..tools import registry as tool_registry
-from ..tools.custom_tools import call_custom_tool
 from ..llm.openai_provider import OpenAIProvider
 
 from fastapi import WebSocket
@@ -106,7 +105,7 @@ class ChatOrchestrator:
                             tool_name = tool.function.name
                             tool_args = tool.function.arguments
                             tool_id = tool.id
-
+                            print(f"calling {tool_name} with args {tool_args}")
                             if self.websocket:
                                 await self.websocket.send_json({"log": f"Calling tool {tool_name} with {tool_args} args"})
 
@@ -129,14 +128,6 @@ class ChatOrchestrator:
                                     else:
                                         result = "Tool Not Found!"
                                 result = custom_result
-
-                            elif any(t["function"]["name"] == tool_name for t in self.custom_tools):
-                                try:
-                                    parsed_args = json.loads(tool_args) if tool_args else {}
-                                except Exception:
-                                    parsed_args = {}
-                                parsed_args["conversations"] = self.messages
-                                result = call_custom_tool(tool_name, parsed_args)
 
                             else:
                                 try:
