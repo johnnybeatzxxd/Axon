@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from mcp_client.main import MCPClient
+from mcp_client.core.chat_orchestrator import ChatOrchestrator
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -57,8 +58,7 @@ class ConnectionManager:
             self.disconnect()
 
     async def send_request(self, event, payload, timeout=None,request_id=None):
-        if not request_id:
-            request_id = str(uuid.uuid4())
+        request_id = str(request_id or uuid.uuid4())
 
         future = asyncio.get_running_loop().create_future()
         self.pending_requests[request_id] = future
@@ -72,7 +72,7 @@ class ConnectionManager:
 
         except asyncio.TimeoutError:
             print("request timeout!")
-            self.pending_requests.pop(future)
+            self.pending_requests.pop(request_id)
             return {"timeout": True}
 
         except asyncio.CancelledError:
@@ -82,16 +82,16 @@ class ConnectionManager:
 
 async def chat(manager,websocket):
     client = MCPClient()
+    orchestrator = ChatOrchestrator()
     try:
         await client.connect_to_server(server_url="http://127.0.0.1:8001/mcp/")
-        await client.chat_loop(manager,websocket)
+        await orchestrator.chat_loop(client.session, manager, websocket)
     except WebSocketDisconnect:
         manager.disconnect()
         print("A client has disconnected.")
     except Exception as e:
         print(f"An error occurred: {e}")
         await manager.disconnect()
-
     finally:
         await client.cleanup()
 

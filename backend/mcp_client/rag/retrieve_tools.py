@@ -30,7 +30,12 @@ def embed_query(query_text: str) -> list[float]:
     )
     return result.embeddings[0].values
 
-def retrieve_semantic_tools(query: str, collection_name: str, distance_threshold: float = 0.6) -> list[str]:
+def retrieve_semantic_tools(
+    query: str,
+    collection_name: str,
+    distance_threshold: float = 0.6,
+    top_k_fallback: int = 0,
+) -> list[str]:
     """
     takes a query and retrieves the most semantically similar
     tools from the specified chromaDB collection.
@@ -56,10 +61,12 @@ def retrieve_semantic_tools(query: str, collection_name: str, distance_threshold
     retrieved_metadatas = results['metadatas'][0]
     distances = results['distances'][0]
     
-    relevant_tool_names = []
+    relevant_tool_names: list[str] = []
+    all_pairs: list[tuple[str, float]] = []
     for i, metadata in enumerate(retrieved_metadatas):
         distance = distances[i]
         tool_name = metadata.get('tool_name', 'Unknown Tool')
+        all_pairs.append((tool_name, distance))
 
         if distance < distance_threshold:
             print(f"  -> Found relevant tool: '{tool_name}' (Distance: {distance:.4f}) - ACCEPTED")
@@ -68,17 +75,34 @@ def retrieve_semantic_tools(query: str, collection_name: str, distance_threshold
             print(f"  -> Found tool: '{tool_name}' (Distance: {distance:.4f}) - REJECTED (Threshold: {distance_threshold})")
             pass
 
+    # Fallback: if none under threshold, return top-k most similar tools by distance
+    if not relevant_tool_names and top_k_fallback > 0 and all_pairs:
+        all_pairs.sort(key=lambda x: x[1])  # lower distance = more similar
+        fallback = [name for name, _ in all_pairs[:top_k_fallback]]
+        print(f"No tools under threshold. Using top-{top_k_fallback} fallback: {fallback}")
+        return fallback
+
     return relevant_tool_names
 
 
 
-def get_relevant_tools_for_chat(chat_history: list[dict], collection_name: str, distance_threshold: float = 0.784) -> list[str]:
+def get_relevant_tools_for_chat(
+    chat_history: list[dict],
+    collection_name: str,
+    distance_threshold: float = 0.784,
+    top_k_fallback: int = 3,
+) -> list[str]:
     """
     finds relevant tools by embedding the context of the entire chat history.
     """
     recent_history = chat_history[-5:]
     contextual_query = str(recent_history)
-    return retrieve_semantic_tools(contextual_query, collection_name, distance_threshold)
+    return retrieve_semantic_tools(
+        contextual_query,
+        collection_name,
+        distance_threshold=distance_threshold,
+        top_k_fallback=top_k_fallback,
+    )
 
 if __name__ == "__main__":
     try:
