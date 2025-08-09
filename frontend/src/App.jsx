@@ -9,20 +9,19 @@ import NotFoundPage from './pages/NotFoundPage'
 function App() {
   const [isNavCollapsed, setIsNavCollapsed] = useState(true)
   const [isNavPinned, setIsNavPinned] = useState(false)
-  const [conversations, setConversations] = useState([
-    { id: 'design', title: 'Design Tips', lastMessage: 'Let’s refine dark gradients', updatedAt: Date.now() - 5000 },
-  ])
-  const [activeConversationId, setActiveConversationId] = useState('design')
-  const [messagesByConversation, setMessagesByConversation] = useState({
-    design: [
-      { id: 'm2', role: 'assistant', text: 'We can iterate on your UI ideas.' },
-    ],
-  })
 
-  // Folder state: each folder owns an ordered list of conversationIds
-  const [folders, setFolders] = useState([
-    { id: 'ideas', name: 'Ideas', conversationIds: ['design'] },
+  // Initialize with a fresh "New chat" every time the app loads
+  const initialConversationId = useMemo(() => crypto.randomUUID(), [])
+  const [conversations, setConversations] = useState(() => [
+    { id: initialConversationId, title: 'New chat', lastMessage: '', updatedAt: Date.now() },
   ])
+  const [activeConversationId, setActiveConversationId] = useState(initialConversationId)
+  const [messagesByConversation, setMessagesByConversation] = useState(() => ({
+    [initialConversationId]: [],
+  }))
+
+  // Start with no folders (remove hard-coded "Ideas" folder)
+  const [folders, setFolders] = useState([])
 
   function truncateTitleFromMessage(message) {
     const max = 24

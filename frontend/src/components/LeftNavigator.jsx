@@ -129,12 +129,14 @@ export default function LeftNavigator({
       role="complementary"
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
-      onClickCapture={(e) => {
+      // Use bubbling phase so child clicks (e.g., selecting a conversation) run first
+      onClick={(e) => {
         if (isPinned) return
-        // Avoid pinning when the dock toggle is clicked
         const target = e.target
-        // some targets may not have closest; guard accordingly
-        if (target && typeof target.closest === 'function' && target.closest('.dock-toggle')) return
+        if (!target || typeof target.closest !== 'function') return
+        // Ignore clicks on explicit controls to avoid unintended pinning
+        if (target.closest('.dock-toggle') || target.closest('.menu') || target.closest('input')) return
+        // Allow conversation selection to occur first, then pin the nav
         onPin?.()
       }}
     >
@@ -277,8 +279,11 @@ export default function LeftNavigator({
                           <div key={conv.id} className={isActive ? 'conversation conversation--active' : 'conversation'}>
                             <button
                               className="conversation__main"
+                              onMouseDown={(e) => {
+                                // Select immediately on primary-button press to avoid parent handlers interfering
+                                if (e.button === 0) onSelectConversation(conv.id)
+                              }}
                               onClick={() => onSelectConversation(conv.id)}
-                              onDoubleClick={() => beginEditConversation(conv.id, conv.title)}
                             >
                               <span className="conversation__icon" aria-hidden>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -306,10 +311,10 @@ export default function LeftNavigator({
                             </button>
                             <div
                               className={openMenuConvId === conv.id ? 'conversation__menu open' : 'conversation__menu'}
-                              onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
                             >
-                              <button
-                                className="menu-trigger"
+                            <button
+                              className="menu-trigger"
                                 aria-label="More actions"
                                 title="More"
                                 onClick={(e) => {
@@ -371,8 +376,10 @@ export default function LeftNavigator({
                     <div className={isActive ? 'conversation conversation--active' : 'conversation'}>
                       <button
                         className="conversation__main"
+                        onMouseDown={(e) => {
+                          if (e.button === 0) onSelectConversation(c.id)
+                        }}
                         onClick={() => onSelectConversation(c.id)}
-                        onDoubleClick={() => beginEditConversation(c.id, c.title)}
                       >
                         <span className="conversation__icon" aria-hidden>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
