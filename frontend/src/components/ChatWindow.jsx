@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types'
 import { useEffect, useRef, useState } from 'react'
+import { LampContainer } from './ui/lamp'
 
 // Static options kept outside the component to avoid re-allocations on re-render
 const MODEL_OPTIONS = ['gpt-4o-mini', 'gpt-4o', 'llama-3.1-70b', 'mistral-large']
@@ -7,7 +8,6 @@ const QUICK_PROMPTS = [
   'Summarize this article: https://example.com',
   'Brainstorm 5 feature ideas for a habit app',
   'Explain WebSockets to a beginner',
-  'Draft an email to follow up on a job interview',
 ]
 
 export default function ChatWindow({ messages, onSend, onExportConversation }) {
@@ -130,10 +130,20 @@ export default function ChatWindow({ messages, onSend, onExportConversation }) {
       </ul>
 
       {showEmptyHero && isEmpty && (
-        <div className={isExitingHero ? 'empty-hero empty-hero--exit' : 'empty-hero fade-in'} aria-live="polite">
-          <div className="empty-hero__light" aria-hidden />
-          <h1 className="empty-hero__title">Axon <span className="slash">/</span> <span className="empty-hero__note">where minds connect to everything</span></h1>
-          <p className="empty-hero__subtitle">Axon links AI models to apps, data, and workflows—so your ideas move from spark to shipped.</p>
+        <div className={isExitingHero ? 'empty-hero empty-hero--exit' : 'empty-hero'} aria-live="polite">
+          <div className="absolute inset-0 z-0 pointer-events-none -translate-y-36" aria-hidden>
+            <LampContainer />
+          </div>
+          <div className="empty-hero__content-shift">
+            <h1 className="empty-hero__title">
+              <span className="empty-hero__main">Axon</span>
+              {' '}<span className="slash">/</span>{' '}
+              <span className="empty-hero__note">where minds connect to everything</span>
+            </h1>
+            <p className="empty-hero__subtitle">
+              Axon links AI models to apps, data, and workflows—so your ideas move from spark to shipped.
+            </p>
+          </div>
         </div>
       )}
 
@@ -145,7 +155,7 @@ export default function ChatWindow({ messages, onSend, onExportConversation }) {
               <button
                 key={p}
                 type="button"
-                className="chip"
+                className="chip chip--small"
                 role="listitem"
                 onClick={() => focusComposer(p)}
               >{p}</button>
