@@ -7,6 +7,7 @@ This document explains how the React + Vite + Tauri frontend is organized so con
 - React Router (client-side routing)
 - PropTypes for runtime prop validation
 - Vite for dev/build
+- Tailwind CSS for styling (utility-first)
 - Tauri for desktop packaging (see `src-tauri/`)
 
 ### High-level Layout
@@ -75,9 +76,9 @@ Route → Page → (Hooks) → Services → API
 ```
 
 ### Styling
-- Centralized CSS variables in `:root` (see `src/index.css`).
-- Layout styles for the shell (app grid), left navigator, chat window, messages, and composer.
-- Keep most component styles global for now; consider collocating styles as the project grows.
+- Tailwind is enabled and scanned via `tailwind.config.js` with `content` set to `index.html` and `src/**/*.{js,jsx,ts,tsx}`.
+- Dark mode is `class`-based; the root `html` has `class="dark"` by default. Toggle at runtime by adding/removing `dark` on `document.documentElement`.
+- Existing global CSS in `src/index.css` remains for custom theming variables and bespoke animations. Gradually replace with Tailwind utilities as needed.
 
 ### Conventions
 - Files are PascalCase for components (`ChatWindow.jsx`), camelCase for utilities (`formatters.js`).

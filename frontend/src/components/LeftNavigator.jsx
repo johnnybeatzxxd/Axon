@@ -5,9 +5,15 @@ import AxonIcon from '../assets/Axon-icon.png'
 import ContextMenu from './ContextMenu'
 import { ConfirmDialog } from './Modal'
 
-function IconButton({ label, onClick, children }) {
+function IconButton({ label, onClick, children, noExpand = false }) {
   return (
-    <button className="icon-button" aria-label={label} title={label} onClick={onClick}>
+    <button
+      className="icon-button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      data-no-expand={noExpand ? 'true' : undefined}
+    >
       {children}
     </button>
   )
@@ -17,6 +23,7 @@ IconButton.propTypes = {
   label: PropTypes.string.isRequired,
   onClick: PropTypes.func,
   children: PropTypes.node.isRequired,
+  noExpand: PropTypes.bool,
 }
 
 export default function LeftNavigator({
@@ -127,15 +134,22 @@ export default function LeftNavigator({
     <aside
       className={isCollapsed ? 'left-nav left-nav--collapsed' : 'left-nav'}
       role="complementary"
-      onMouseEnter={onHoverEnter}
-      onMouseLeave={onHoverLeave}
+      /* Hover-to-expand disabled: expand via click only */
       // Use bubbling phase so child clicks (e.g., selecting a conversation) run first
       onClick={(e) => {
         if (isPinned) return
         const target = e.target
         if (!target || typeof target.closest !== 'function') return
         // Ignore clicks on explicit controls to avoid unintended pinning
-        if (target.closest('.dock-toggle') || target.closest('.menu') || target.closest('input')) return
+        if (
+          target.closest('.dock-toggle') ||
+          target.closest('.menu') ||
+          target.closest('input') ||
+          target.closest('a.icon-button') ||
+          target.closest('[data-no-expand="true"]') ||
+          target.closest('[noexpand]') ||
+          target.closest('[noexpand="true"]')
+        ) return
         // Allow conversation selection to occur first, then pin the nav
         onPin?.()
       }}
@@ -148,7 +162,7 @@ export default function LeftNavigator({
 
         {/* Row actions in expanded state */}
         <div className="left-nav__actions">
-          <IconButton label="New chat" onClick={() => onNewConversation(selectedFolderId)}>
+          <IconButton label="New chat" noExpand onClick={() => onNewConversation(selectedFolderId)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
@@ -169,7 +183,7 @@ export default function LeftNavigator({
               <path d="M12 11v6M9 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </IconButton>
-          <Link to="/settings" aria-label="Settings" className="icon-button" title="Settings">
+          <Link to="/settings" aria-label="Settings" className="icon-button" noExpand title="Settings">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="2" />
               <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.7l-.1.4a2 2 0 1 1-4 0l-.1-.4a1 1 0  0 0-.6-.7 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.7-.6l-.4-.1a2 2 0 1 1 0-4l.4-.1a1 1 0 0 0 .7-.6 1 1 0 0 0-.2-1.1l-.1-.1A2 2 0 1 1 6.8 4l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.7l.1-.4a2 2 0 1 1 4 0l.1.4a1 1 0 0 0 .6.7 1 1 0 0 0 1.1-.2l.1-.1A2 2 0 1 1 21 6.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .7.6l.4.1a2 2 0 1 1 0 4l-.4.1a1 1 0 0 0-.7.6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -179,7 +193,7 @@ export default function LeftNavigator({
 
         {/* Vertical rail in collapsed state */}
         <div className="left-nav__rail">
-          <IconButton label="New chat" onClick={() => onNewConversation(selectedFolderId)}>
+          <IconButton label="New chat" noExpand onClick={() => onNewConversation(selectedFolderId)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>

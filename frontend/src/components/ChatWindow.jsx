@@ -145,7 +145,7 @@ export default function ChatWindow({ messages, onSend, onExportConversation }) {
               <button
                 key={p}
                 type="button"
-                className="chip"
+                className="chip chip--small"
                 role="listitem"
                 onClick={() => focusComposer(p)}
               >{p}</button>
