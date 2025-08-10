@@ -83,8 +83,12 @@
   
   /* Empty state */
   .empty-hero { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; grid-auto-rows: min-content; row-gap: 6px; text-align: center; padding: 20px; pointer-events: none }
-  /* When entering with the generic fade-in class, slow it down for the hero */
-  .empty-hero.fade-in { animation-duration: 720ms; animation-timing-function: cubic-bezier(.2,.7,.2,1) }
+  /* Slight upward shift for hero content using a responsive clamp so it doesn't break on different devices */
+  
+/* Slight upward shift for hero content using a responsive clamp so it doesn't break on different devices */
+  .empty-hero__content-shift { transform: translateY(clamp(-10px, -3.5vh, -36px)); will-change: transform }
+  .empty-hero__content-shift { transform: translateY(clamp(-16px, -5.5vh, -46px)); will-change: transform }
+  .empty-hero.fade-in { animation: none }
   .empty-hero--exit { animation: hero-exit 700ms cubic-bezier(.2,.7,.2,1) forwards }
   @keyframes hero-exit {
     0% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg) }
@@ -174,7 +178,7 @@
   /* Empty state */
   .empty-hero { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; grid-auto-rows: min-content; row-gap: 6px; text-align: center; padding: 20px; pointer-events: none }
   /* When entering with the generic fade-in class, slow it down for the hero */
-  .empty-hero.fade-in { animation-duration: 720ms; animation-timing-function: cubic-bezier(.2,.7,.2,1) }
+  .empty-hero.fade-in { animation: none }
   .empty-hero--exit { animation: hero-exit 700ms cubic-bezier(.2,.7,.2,1) forwards }
   @keyframes hero-exit {
     0% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg) }
@@ -229,10 +233,42 @@
     align-items: baseline;
     gap: 10px;
     justify-self: center;
-    opacity: 0;
-    transform: translateY(8px);
-    animation: hero-title-in 900ms cubic-bezier(.2,.7,.2,1) 140ms forwards;
+    opacity: 0.01; /* start near-black/transparent to avoid flash */
+    transform: translateY(4px);
+    animation: hero-title-fade 1200ms ease 600ms forwards;
   }
+  @keyframes hero-title-fade {
+    0% { opacity: 0.01; filter: brightness(0.4); transform: translateY(4px) }
+    60% { opacity: 0.7; filter: brightness(0.85); transform: translateY(2px) }
+    100% { opacity: 1; filter: brightness(1); transform: translateY(0) }
+  }
+  /* Color ramp for the main brand text */
+  .empty-hero__main {
+    background: linear-gradient(90deg, #000000 0%, #3a3f45 45%, #aeb3bb 85%, #ffffff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    opacity: 0; /* start fully invisible */
+    filter: brightness(0.2);
+    /* Sync with lamp beams (delay ~300ms, duration ~800ms) */
+    animation: hero-main-reveal 800ms cubic-bezier(.2,.7,.2,1) 300ms forwards;
+  }
+  @keyframes hero-main-reveal {
+    0%   { opacity: 0;   filter: brightness(0.2); }
+    40%  { opacity: 0.35; filter: brightness(0.55); }
+    70%  { opacity: 0.75; filter: brightness(0.9); }
+    100% { opacity: 1;   filter: brightness(1); color: #ffffff; -webkit-text-fill-color: #ffffff; }
+  }
+  /* Subtext stays muted; animate subtle color lift */
+  /* Subtitle lags slightly behind Axon to complete the sequence */
+  .empty-hero__note { color: rgba(255,255,255,0.0); animation: hero-note-fade 900ms cubic-bezier(.2,.7,.2,1) 450ms forwards }
+  @keyframes hero-note-fade {
+    0% { color: rgba(255,255,255,0.0) }
+    60% { color: rgba(255,255,255,0.5) }
+    100% { color: rgba(255,255,255,0.72) }
+  }
+  .slash { opacity: 0.55 }
   .empty-hero__title .slash { opacity: 0.5; margin: 0 10px }
   .empty-hero__note { font-weight: 600; opacity: 0.8; font-size: clamp(18px, 2.6vw, 28px) }
   .empty-hero__subtitle {
@@ -785,9 +821,10 @@
     align-items: baseline;
     gap: 10px;
     justify-self: center;
-    opacity: 0;
-    transform: translateY(8px);
-    animation: hero-title-in 900ms cubic-bezier(.2,.7,.2,1) 140ms forwards;
+    /* disable old title animation to avoid double-run; handled by hero-title-fade now */
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
   .empty-hero__title .slash { opacity: 0.5; margin: 0 10px }
   .empty-hero__note { font-weight: 600; opacity: 0.8; font-size: clamp(18px, 2.6vw, 28px) }
@@ -796,9 +833,10 @@
     max-width: 820px;
     margin: 0 auto 26px;
     font-size: clamp(14px, 2.2vw, 16px);
-    opacity: 0;
-    transform: translateY(10px);
-    animation: hero-subtitle-in 1100ms cubic-bezier(.2,.7,.2,1) 260ms forwards;
+    /* disable old subtitle animation to avoid double-run; handled by hero-note-fade now */
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
   @keyframes hero-title-in {
     to { opacity: 1; transform: translateY(0) }
