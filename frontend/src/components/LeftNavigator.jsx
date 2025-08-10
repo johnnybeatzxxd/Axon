@@ -42,6 +42,8 @@ export default function LeftNavigator({
   isCollapsed = false,
   onToggleCollapsed,
   onDeleteFolder,
+  isDrawerOpen = false,
+  onRequestCloseDrawer,
   isPinned = false,
   onPin,
   onUnpin,
@@ -132,7 +134,13 @@ export default function LeftNavigator({
 
   return (
     <aside
-      className={isCollapsed ? 'left-nav left-nav--collapsed' : 'left-nav'}
+      className={
+        isDrawerOpen
+          ? 'left-nav left-nav--drawer-open'
+          : isCollapsed
+            ? 'left-nav left-nav--collapsed'
+            : 'left-nav'
+      }
       role="complementary"
       /* Hover-to-expand disabled: expand via click only */
       // Use bubbling phase so child clicks (e.g., selecting a conversation) run first
@@ -151,7 +159,8 @@ export default function LeftNavigator({
           target.closest('[noexpand="true"]')
         ) return
         // Allow conversation selection to occur first, then pin the nav
-        onPin?.()
+        if (isDrawerOpen) onRequestCloseDrawer?.()
+        else onPin?.()
       }}
     >
       <div className="left-nav__top">
@@ -571,6 +580,8 @@ LeftNavigator.propTypes = {
   isCollapsed: PropTypes.bool,
   onToggleCollapsed: PropTypes.func,
   onDeleteFolder: PropTypes.func,
+  isDrawerOpen: PropTypes.bool,
+  onRequestCloseDrawer: PropTypes.func,
 }
 
 

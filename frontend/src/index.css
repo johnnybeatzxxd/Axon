@@ -87,7 +87,7 @@
   
 /* Slight upward shift for hero content using a responsive clamp so it doesn't break on different devices */
   .empty-hero__content-shift { transform: translateY(clamp(-10px, -3.5vh, -36px)); will-change: transform }
-  .empty-hero__content-shift { transform: translateY(clamp(-16px, -5.5vh, -46px)); will-change: transform }
+  .empty-hero__content-shift { transform: translateY(clamp(-20px, -6vh, -50px)); will-change: transform }
   .empty-hero.fade-in { animation: none }
   .empty-hero--exit { animation: hero-exit 700ms cubic-bezier(.2,.7,.2,1) forwards }
   @keyframes hero-exit {
@@ -779,9 +779,38 @@
     color: var(--text);
   }
   
-  @media (max-width: 900px) {
+  @media (max-width: 768px) {
     .app { grid-template-columns: 1fr } /* hide left-nav on mobile */
     .left-nav { display: none }
+  }
+
+  /* Mobile/drawer enhancements appended */
+  .mobile-nav-button { display: none; margin-right: 6px; background: transparent; border: 0; color: var(--text); padding: 6px; border-radius: 8px }
+  .mobile-nav-button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,0.2) }
+  .drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); border: 0; padding: 0; margin: 0; z-index: 30; cursor: default }
+  .left-nav.left-nav--drawer-open { position: fixed; inset: 0 auto 0 0; width: 82vw; max-width: 320px; transform: translateX(0); z-index: 40; box-shadow: 4px 0 24px rgba(0,0,0,0.6) }
+
+  @media (max-width: 768px) {
+    .app { grid-template-columns: 1fr }
+    .app.app--nav-collapsed { grid-template-columns: 1fr }
+    /* Override earlier rule that hides nav */
+    .left-nav { display: flex !important; position: fixed; inset: 0 auto 0 0; width: 82vw; max-width: 320px; transform: translateX(-100%); transition: transform 220ms ease }
+    .left-nav.left-nav--collapsed { transform: translateX(-100%) }
+    .left-nav.left-nav--drawer-open { transform: translateX(0) }
+    .left-nav__rail, .dock-toggle { display: none !important }
+
+    .chat-window { padding: 10px 12px }
+    .chat-header__inner { gap: 8px }
+    .mobile-nav-button { display: inline-grid }
+    .model-select { height: 32px }
+    .save-button { height: 32px; padding: 0 10px }
+
+    .message-list { width: 100%; padding-bottom: 140px }
+    .message__bubble { max-width: 90% }
+    .composer { padding: 10px }
+    .composer__field { width: 100% }
+    .composer__bottom { gap: 8px; padding: 8px 10px }
+    .composer__textarea { min-height: 56px; padding: 12px 14px }
   }
   
   /* Thin highlight line to sell the light source */

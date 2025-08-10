@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import LeftNavigator from './components/LeftNavigator'
 import ChatWindow from './components/ChatWindow'
 import SettingsPage from './pages/SettingsPage'
@@ -9,6 +9,16 @@ import NotFoundPage from './pages/NotFoundPage'
 function App() {
   const [isNavCollapsed, setIsNavCollapsed] = useState(true)
   const [isNavPinned, setIsNavPinned] = useState(false)
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
+
+  // Close mobile drawer on viewport resize to desktop to avoid stuck state
+  useEffect(() => {
+    function onResize() {
+      if (window.innerWidth > 768 && isMobileNavOpen) setIsMobileNavOpen(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [isMobileNavOpen])
 
   // Initialize with a fresh "New chat" every time the app loads
   const initialConversationId = useMemo(() => crypto.randomUUID(), [])
@@ -188,6 +198,7 @@ function App() {
         onSelectConversation={(id) => {
           setActiveConversationId(id)
           // navigate handled by link buttons in the nav in future
+          if (isMobileNavOpen) setIsMobileNavOpen(false)
         }}
         onNewConversation={handleNewConversation}
         onOpenSettings={handleOpenSettings}
@@ -216,13 +227,29 @@ function App() {
           if (!isNavPinned) setIsNavCollapsed(true)
         }}
         onDeleteFolder={handleDeleteFolder}
+        isDrawerOpen={isMobileNavOpen}
+        onRequestCloseDrawer={() => setIsMobileNavOpen(false)}
       />
 
+      {isMobileNavOpen && (
+        <button
+          className="drawer-overlay"
+          aria-label="Close navigator"
+          onClick={() => setIsMobileNavOpen(false)}
+        />
+      )}
+
       <Routes>
-        <Route path="/" element={<ChatWindow messages={messages} onSend={handleSend} />} />
+        <Route
+          path="/"
+          element={<ChatWindow messages={messages} onSend={handleSend} onOpenNav={() => setIsMobileNavOpen(true)} />}
+        />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/library" element={<LibraryPage />} />
-        <Route path="/chat/:id" element={<ChatWindow messages={messages} onSend={handleSend} />} />
+        <Route
+          path="/chat/:id"
+          element={<ChatWindow messages={messages} onSend={handleSend} onOpenNav={() => setIsMobileNavOpen(true)} />}
+        />
         <Route path="/home" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

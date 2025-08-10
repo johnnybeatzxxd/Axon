@@ -10,7 +10,7 @@ const QUICK_PROMPTS = [
   'Explain WebSockets to a beginner',
 ]
 
-export default function ChatWindow({ messages, onSend, onExportConversation }) {
+export default function ChatWindow({ messages, onSend, onExportConversation, onOpenNav }) {
   const listRef = useRef(null)
   const inputRef = useRef(null)
   const [showEmptyHero, setShowEmptyHero] = useState(!messages || messages.length === 0)
@@ -96,6 +96,16 @@ export default function ChatWindow({ messages, onSend, onExportConversation }) {
       <div className="chat-header">
         <div className="chat-header__inner">
           <div className="chat-header__left">
+            <button
+              type="button"
+              className="mobile-nav-button"
+              aria-label="Open navigator"
+              onClick={onOpenNav}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
             <label className="visually-hidden" htmlFor="model-select">Model</label>
             <select
               id="model-select"
@@ -233,6 +243,7 @@ ChatWindow.propTypes = {
   ).isRequired,
   onSend: PropTypes.func.isRequired,
   onExportConversation: PropTypes.func,
+  onOpenNav: PropTypes.func,
 }
 
 
