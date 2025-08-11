@@ -1,3 +1,8 @@
+
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
 /* Intentionally left minimal – main styles moved to index.css */
 @tailwind base;
 @tailwind components;
@@ -9,19 +14,19 @@
     --surface: #ffffff;
     --text: #ffffff;
     --text-on-surface: #0b0b0d;
-    --muted: #a8a8b3;
-    --primary: #ffffff;
-    --radius: 14px;
+    --muted: oklch(0.97 0 0);
+    --primary: oklch(0.205 0 0);
+    --radius: 0.625rem;
     --chat-header-space: 56px; /* space reserved at top of the feed */
-    --chat-content-width: min(900px, 92%); /* shared width for messages and composer */
+    --chat-content-width: min(900px, 92%); /* shared width for messages and composer */ --background: oklch(1 0 0); --foreground: oklch(0.145 0 0); --card: oklch(1 0 0); --card-foreground: oklch(0.145 0 0); --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary-foreground: oklch(0.985 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted-foreground: oklch(0.556 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --border: oklch(0.922 0 0); --input: oklch(0.922 0 0); --ring: oklch(0.708 0 0); --chart-1: oklch(0.646 0.222 41.116); --chart-2: oklch(0.6 0.118 184.704); --chart-3: oklch(0.398 0.07 227.392); --chart-4: oklch(0.828 0.189 84.429); --chart-5: oklch(0.769 0.188 70.08); --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0);
   }
-  
+
   * { box-sizing: border-box }
-  
+
   html, body, #root {
     height: 100%;
   }
-  
+
   body {
     margin: 0;
     color: var(--text);
@@ -29,7 +34,7 @@
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
     overflow: hidden; /* prevent page scroll; use in-app scroll containers */
   }
-  
+
   .app {
     height: 100%;
     display: grid;
@@ -46,7 +51,7 @@
   .left-nav.left-nav--collapsed .left-nav__scroll { display: none }
   .left-nav.left-nav--collapsed .left-nav__actions { display: none }
   .left-nav:not(.left-nav--collapsed) .left-nav__rail { display: none }
-  
+
   /* Chat window */
   .chat-window {
     position: relative;
@@ -56,7 +61,7 @@
     height: 100%;
     overflow: hidden; /* confine scrolling to internal containers */
   }
-  
+
   /* First-send "wave" animation: a soft radial pulse rising from the composer */
   .chat-window.chat-window--sending::after {
     content: "";
@@ -72,19 +77,19 @@
     animation: send-wave 800ms ease-out forwards;
     filter: blur(2px);
   }
-  
+
   @keyframes send-wave {
     0% { opacity: 0.6; transform: translateX(-50%) translateY(0) scale(1); }
     60% { opacity: 0.25; transform: translateX(-50%) translateY(-80px) scale(10); }
     100% { opacity: 0; transform: translateX(-50%) translateY(-110px) scale(14); }
   }
-  
+
   .chat-gradient { display: none }
-  
+
   /* Empty state */
   .empty-hero { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; grid-auto-rows: min-content; row-gap: 6px; text-align: center; padding: 20px; pointer-events: none }
   /* Slight upward shift for hero content using a responsive clamp so it doesn't break on different devices */
-  
+
 /* Slight upward shift for hero content using a responsive clamp so it doesn't break on different devices */
   .empty-hero__content-shift { transform: translateY(clamp(-10px, -3.5vh, -36px)); will-change: transform }
   .empty-hero__content-shift { transform: translateY(clamp(-20px, -6vh, -50px)); will-change: transform }
@@ -109,13 +114,13 @@
     --chat-header-space: 0px; /* space reserved at top of the feed */
   --chat-content-width: min(900px, 92%); /* shared width for messages and composer */
   }
-  
+
   * { box-sizing: border-box }
-  
+
   html, body, #root {
     height: 100%;
   }
-  
+
   body {
     margin: 0;
     color: var(--text);
@@ -123,7 +128,7 @@
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
     overflow: hidden; /* prevent page scroll; use in-app scroll containers */
   }
-  
+
   .app {
     height: 100%;
     display: grid;
@@ -140,7 +145,7 @@
   .left-nav.left-nav--collapsed .left-nav__scroll { display: none }
   .left-nav.left-nav--collapsed .left-nav__actions { display: none }
   .left-nav:not(.left-nav--collapsed) .left-nav__rail { display: none }
-  
+
   /* Chat window */
   .chat-window {
     position: relative;
@@ -150,7 +155,7 @@
     height: 100%;
     overflow: hidden; /* confine scrolling to internal containers */
   }
-  
+
   /* First-send "wave" animation: a soft radial pulse rising from the composer */
   .chat-window.chat-window--sending::after {
     content: "";
@@ -166,15 +171,15 @@
     animation: send-wave 800ms ease-out forwards;
     filter: blur(2px);
   }
-  
+
   @keyframes send-wave {
     0% { opacity: 0.6; transform: translateX(-50%) translateY(0) scale(1); }
     60% { opacity: 0.25; transform: translateX(-50%) translateY(-80px) scale(10); }
     100% { opacity: 0; transform: translateX(-50%) translateY(-110px) scale(14); }
   }
-  
+
   .chat-gradient { display: none }
-  
+
   /* Empty state */
   .empty-hero { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; grid-auto-rows: min-content; row-gap: 6px; text-align: center; padding: 20px; pointer-events: none }
   /* When entering with the generic fade-in class, slow it down for the hero */
@@ -296,16 +301,16 @@
     cursor: pointer;
   }
   .chip:hover { background: rgba(255,255,255,0.08) }
-  
+
   .btn--primary { background: linear-gradient(180deg, #ffffff, #e9e9e9); color: #0b0b0d; border-color: rgba(255,255,255,0.2) }
   .btn--primary:hover { filter: brightness(0.97) }
-  
+
   .fade-in { animation: fade-in 320ms ease both }
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(6px) }
     to { opacity: 1; transform: translateY(0) }
   }
-  
+
   .chat-header {
     position: sticky;
     top: 0;
@@ -338,7 +343,7 @@
   .model-select:focus-visible { box-shadow: 0 0 0 3px rgba(255,255,255,0.14) }
   .save-button { height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #121214; color: var(--text); cursor: pointer }
   .save-button:hover { background: rgba(255,255,255,0.08) }
-  
+
   /* Scrollable message feed with breathing space at sides */
   .message-list {
     list-style: none;
@@ -356,13 +361,13 @@
     z-index: 3; /* ensure messages are above header visuals */
   }
   .message-list::-webkit-scrollbar { width: 0; height: 0 } /* Chrome/Safari */
-  
+
   .message {
     display: flex;
     margin: 12px 0;
   }
   .message--user { justify-content: flex-end }
-  
+
   .message__bubble {
     max-width: min(680px, 78%);
     padding: 10px 14px;
@@ -376,7 +381,7 @@
     overflow-wrap: anywhere; /* break long tokens/URLs */
     word-break: break-word; /* safety for extreme strings */
   }
-  
+
   /* Assistant: no bubble look */
   .message--assistant .message__bubble {
     background: transparent;
@@ -386,14 +391,14 @@
     border-radius: 0;
     color: var(--text);
   }
-  
+
   /* User: dark grey bubble with readable text */
   .message--user .message__bubble {
     background: #1b1c20;
     color: var(--text);
     border-color: rgba(255,255,255,0.14);
   }
-  
+
   .composer {
     position: sticky;
     bottom: 0;
@@ -408,7 +413,7 @@
     padding: 14px;
     background: var(--bg);
   }
-  
+
   /* Prompt bar now lives inside the composer, directly above the input */
   .prompt-bar {
     grid-area: prompts;
@@ -425,10 +430,10 @@
     0% { opacity: 1; transform: translateY(0) }
     100% { opacity: 0; transform: translateY(8px) }
   }
-  
+
   .composer__input { grid-area: input }
   .composer__send { grid-area: input }
-  
+
   /* Input field wrapper to place the send button inside */
   .composer__field {
     grid-area: input;
@@ -436,7 +441,7 @@
     width: var(--chat-content-width);
     justify-self: center;
   }
-  
+
   /* Two-row input box: top is editor (scrollable), bottom is toolbar */
   .composer__box {
     border-radius: var(--radius);
@@ -446,7 +451,7 @@
     display: grid;
     grid-template-rows: 1fr auto;
   }
-  
+
   .composer__editor {
     max-height: 180px;
     overflow: auto; /* scroll text area independently */
@@ -455,7 +460,7 @@
     -ms-overflow-style: none; /* IE/Edge */
   }
   .composer__editor::-webkit-scrollbar { width: 0; height: 0 }
-  
+
   .composer__textarea {
     width: 100%;
     min-height: 64px;
@@ -476,7 +481,7 @@
     outline: none;
     box-shadow: none;
   }
-  
+
   .composer__bottom {
     display: flex;
     align-items: center;
@@ -484,7 +489,7 @@
     padding: 10px 12px; /* comfortable padding */
     border-top: none; /* remove divider line between editor and buttons */
   }
-  
+
   .composer__input {
     min-height: 96px; /* a bit higher by default */
     max-height: 180px; /* match JS clamp */
@@ -504,7 +509,7 @@
   }
   .composer__toolbar { display: none }
   .composer__toolbar--exit { display: none }
-  
+
   .composer__tool,
   .composer__icon-button {
     height: 28px;
@@ -519,7 +524,7 @@
   }
   .composer__tool:hover,
   .composer__icon-button:hover { background: rgba(255,255,255,0.06) }
-  
+
   .composer__chips {
     display: flex;
     align-items: center;
@@ -536,7 +541,7 @@
     border-color: inherit;
     box-shadow: none;
   }
-  
+
   .composer__send {
     height: 36px;
     width: 36px;
@@ -564,11 +569,11 @@
     box-shadow: 0 0 0 3px rgba(255,255,255,0.25), 0 6px 18px rgba(0,0,0,0.35);
   }
   .composer__send svg { width: 16px; height: 16px; transform: none }
-  
+
   /* Hide native scrollbar visuals in textarea while retaining scrollability */
   .composer__input::-webkit-scrollbar { width: 0; height: 0 }
   .composer__input { scrollbar-width: none; -ms-overflow-style: none }
-  
+
   /* Left navigator */
   .left-nav {
     height: 100%;
@@ -588,18 +593,18 @@
   /* Arrow-only shrinker */
   .dock-toggle { width: 28px; height: 28px; border-radius: 0; border: none; background: transparent; color: var(--text); display: grid; place-items: center; cursor: pointer; padding: 0 }
   .dock-toggle:hover { background: transparent; opacity: 0.85 }
-  
+
   .left-nav__top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 14px 14px 24px 14px; /* add more space below actions */
   }
-  
+
   .brand { display: flex; gap: 8px; align-items: center; font-weight: 700 }
   .brand__logo { width: 55px; height: 55px; display: block; transform: translatey(5px);}
   .brand__text { letter-spacing: 0.3px }
-  
+
   .left-nav__actions { display: flex; gap: 8px }
   /* Collapsed vertical rail */
   .left-nav__rail { display: flex; flex-direction: column; gap: 8px }
@@ -621,7 +626,7 @@
     cursor: pointer;
   }
   .icon-button:hover { background: rgba(255,255,255,0.07) }
-  
+
   .left-nav__label {
     color: var(--muted);
     font-size: 12px;
@@ -630,14 +635,14 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-  
+
   .conversation-list {
     list-style: none;
     margin: 0;
     padding: 8px;
     overflow: visible;
   }
-  
+
   .conversation {
     width: 100%;
     display: flex;
@@ -667,7 +672,7 @@
     font: inherit;
     padding: 0;
   }
-  
+
   .conversation__main {
     display: flex;
     align-items: center;
@@ -679,7 +684,7 @@
     cursor: pointer;
     text-align: left;
   }
-  
+
   .conversation__menu { position: relative; margin-left: auto }
   .menu-trigger {
     width: 28px;
@@ -719,7 +724,7 @@
   .conversation__menu .menu button:hover {
     background: rgba(255,255,255,0.06);
   }
-  
+
   /* Folder styles */
   .folder { margin: 8px 0; padding: 8px; border-radius: 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.10) }
   .folder--selected { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.03) }
@@ -736,7 +741,7 @@
     font: inherit;
     width: 100%;
   }
-  
+
   .context-menu {
     position: fixed;
     z-index: 1000;
@@ -759,7 +764,7 @@
     cursor: pointer;
   }
   .context-menu__item:hover { background: rgba(255,255,255,0.06) }
-  
+
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: grid; place-items: center; z-index: 1100 }
   .modal { width: min(480px, 92vw); border-radius: 14px; background: #0f0f10; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 20px 60px rgba(0,0,0,0.5); padding: 18px }
   .modal__header { font-weight: 700; margin-bottom: 10px }
@@ -769,7 +774,7 @@
   .btn--ghost { background: transparent; border-color: rgba(255,255,255,0.16) }
   .btn--danger { background: #d93c3c; border-color: #d93c3c; color: white }
   .btn--danger:hover { filter: brightness(0.95) }
-  
+
   .select {
     width: 100%;
     height: 32px;
@@ -778,7 +783,7 @@
     background: #111114;
     color: var(--text);
   }
-  
+
   @media (max-width: 768px) {
     .app { grid-template-columns: 1fr } /* hide left-nav on mobile */
     .left-nav { display: none }
@@ -812,7 +817,7 @@
     .composer__bottom { gap: 8px; padding: 8px 10px }
     .composer__textarea { min-height: 56px; padding: 12px 14px }
   }
-  
+
   /* Thin highlight line to sell the light source */
   .empty-hero__light::before {
     content: "";
@@ -883,16 +888,16 @@
     cursor: pointer;
   }
   .chip:hover { background: rgba(255,255,255,0.08) }
-  
+
   .btn--primary { background: linear-gradient(180deg, #ffffff, #e9e9e9); color: #0b0b0d; border-color: rgba(255,255,255,0.2) }
   .btn--primary:hover { filter: brightness(0.97) }
-  
+
   .fade-in { animation: fade-in 320ms ease both }
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(6px) }
     to { opacity: 1; transform: translateY(0) }
   }
-  
+
   .chat-header {
     position: sticky;
     top: 0;
@@ -925,7 +930,7 @@
   .model-select:focus-visible { box-shadow: 0 0 0 3px rgba(255,255,255,0.14) }
   .save-button { height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: #121214; color: var(--text); cursor: pointer }
   .save-button:hover { background: rgba(255,255,255,0.08) }
-  
+
   /* Scrollable message feed with breathing space at sides */
   .message-list {
     list-style: none;
@@ -943,13 +948,13 @@
     z-index: 3; /* ensure messages are above header visuals */
   }
   .message-list::-webkit-scrollbar { width: 0; height: 0 } /* Chrome/Safari */
-  
+
   .message {
     display: flex;
     margin: 12px 0;
   }
   .message--user { justify-content: flex-end }
-  
+
   .message__bubble {
     max-width: min(680px, 78%);
     padding: 10px 14px;
@@ -963,7 +968,7 @@
     overflow-wrap: anywhere; /* break long tokens/URLs */
     word-break: break-word; /* safety for extreme strings */
   }
-  
+
   /* Assistant: no bubble look */
   .message--assistant .message__bubble {
     background: transparent;
@@ -973,14 +978,14 @@
     border-radius: 0;
     color: var(--text);
   }
-  
+
   /* User: dark grey bubble with readable text */
   .message--user .message__bubble {
     background: #1b1c20;
     color: var(--text);
     border-color: rgba(255,255,255,0.14);
   }
-  
+
   .composer {
     position: sticky;
     bottom: 0;
@@ -995,7 +1000,7 @@
     padding: 14px;
     background: var(--bg);
   }
-  
+
   /* Prompt bar now lives inside the composer, directly above the input */
   .prompt-bar {
     grid-area: prompts;
@@ -1012,10 +1017,10 @@
     0% { opacity: 1; transform: translateY(0) }
     100% { opacity: 0; transform: translateY(8px) }
   }
-  
+
   .composer__input { grid-area: input }
   .composer__send { grid-area: input }
-  
+
   /* Input field wrapper to place the send button inside */
   .composer__field {
     grid-area: input;
@@ -1023,7 +1028,7 @@
     width: var(--chat-content-width);
     justify-self: center;
   }
-  
+
   /* Two-row input box: top is editor (scrollable), bottom is toolbar */
   .composer__box {
     border-radius: var(--radius);
@@ -1033,7 +1038,7 @@
     display: grid;
     grid-template-rows: 1fr auto;
   }
-  
+
   .composer__editor {
     max-height: 180px;
     overflow: auto; /* scroll text area independently */
@@ -1042,7 +1047,7 @@
     -ms-overflow-style: none; /* IE/Edge */
   }
   .composer__editor::-webkit-scrollbar { width: 0; height: 0 }
-  
+
   .composer__textarea {
     width: 100%;
     min-height: 64px;
@@ -1063,7 +1068,7 @@
     outline: none;
     box-shadow: none;
   }
-  
+
   .composer__bottom {
     display: flex;
     align-items: center;
@@ -1071,7 +1076,7 @@
     padding: 10px 12px; /* comfortable padding */
     border-top: none; /* remove divider line between editor and buttons */
   }
-  
+
   .composer__input {
     min-height: 96px; /* a bit higher by default */
     max-height: 180px; /* match JS clamp */
@@ -1091,7 +1096,7 @@
   }
   .composer__toolbar { display: none }
   .composer__toolbar--exit { display: none }
-  
+
   .composer__tool,
   .composer__icon-button {
     height: 28px;
@@ -1106,7 +1111,7 @@
   }
   .composer__tool:hover,
   .composer__icon-button:hover { background: rgba(255,255,255,0.06) }
-  
+
   .composer__chips {
     display: flex;
     align-items: center;
@@ -1123,7 +1128,7 @@
     border-color: inherit;
     box-shadow: none;
   }
-  
+
   .composer__send {
     height: 36px;
     width: 36px;
@@ -1151,11 +1156,11 @@
     box-shadow: 0 0 0 3px rgba(255,255,255,0.25), 0 6px 18px rgba(0,0,0,0.35);
   }
   .composer__send svg { width: 16px; height: 16px; transform: none }
-  
+
   /* Hide native scrollbar visuals in textarea while retaining scrollability */
   .composer__input::-webkit-scrollbar { width: 0; height: 0 }
   .composer__input { scrollbar-width: none; -ms-overflow-style: none }
-  
+
   /* Left navigator */
   .left-nav {
     height: 100%;
@@ -1175,18 +1180,18 @@
   /* Arrow-only shrinker */
   .dock-toggle { width: 28px; height: 28px; border-radius: 0; border: none; background: transparent; color: var(--text); display: grid; place-items: center; cursor: pointer; padding: 0 }
   .dock-toggle:hover { background: transparent; opacity: 0.85 }
-  
+
   .left-nav__top {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 14px 14px 24px 14px; /* add more space below actions */
   }
-  
+
   .brand { display: flex; gap: 8px; align-items: center; font-weight: 700 }
   .brand__logo { width: 55px; height: 55px; display: block; transform: translatey(5px);}
   .brand__text { letter-spacing: 0.3px }
-  
+
   .left-nav__actions { display: flex; gap: 8px }
   /* Collapsed vertical rail */
   .left-nav__rail { display: flex; flex-direction: column; gap: 8px }
@@ -1208,7 +1213,7 @@
     cursor: pointer;
   }
   .icon-button:hover { background: rgba(255,255,255,0.07) }
-  
+
   .left-nav__label {
     color: var(--muted);
     font-size: 12px;
@@ -1217,14 +1222,14 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-  
+
   .conversation-list {
     list-style: none;
     margin: 0;
     padding: 8px;
     overflow: visible;
   }
-  
+
   .conversation {
     width: 100%;
     display: flex;
@@ -1254,7 +1259,7 @@
     font: inherit;
     padding: 0;
   }
-  
+
   .conversation__main {
     display: flex;
     align-items: center;
@@ -1266,7 +1271,7 @@
     cursor: pointer;
     text-align: left;
   }
-  
+
   .conversation__menu { position: relative; margin-left: auto }
   .menu-trigger {
     width: 28px;
@@ -1306,7 +1311,7 @@
   .conversation__menu .menu button:hover {
     background: rgba(255,255,255,0.06);
   }
-  
+
   /* Folder styles */
   .folder { margin: 8px 0; padding: 8px; border-radius: 10px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.10) }
   .folder--selected { border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.03) }
@@ -1323,7 +1328,7 @@
     font: inherit;
     width: 100%;
   }
-  
+
   .context-menu {
     position: fixed;
     z-index: 1000;
@@ -1346,7 +1351,7 @@
     cursor: pointer;
   }
   .context-menu__item:hover { background: rgba(255,255,255,0.06) }
-  
+
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: grid; place-items: center; z-index: 1100 }
   .modal { width: min(480px, 92vw); border-radius: 14px; background: #0f0f10; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 20px 60px rgba(0,0,0,0.5); padding: 18px }
   .modal__header { font-weight: 700; margin-bottom: 10px }
@@ -1356,7 +1361,7 @@
   .btn--ghost { background: transparent; border-color: rgba(255,255,255,0.16) }
   .btn--danger { background: #d93c3c; border-color: #d93c3c; color: white }
   .btn--danger:hover { filter: brightness(0.95) }
-  
+
   .select {
     width: 100%;
     height: 32px;
@@ -1365,9 +1370,90 @@
     background: #111114;
     color: var(--text);
   }
-  
+
   @media (max-width: 900px) {
     .app { grid-template-columns: 1fr } /* hide left-nav on mobile */
     .left-nav { display: none }
   }
-  
+
+  @theme inline {
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+}
+
+  @layer base {
+  * {
+    @apply border-border outline-ring/50;
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+}
+

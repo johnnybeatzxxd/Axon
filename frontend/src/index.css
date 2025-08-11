@@ -1,4 +1,31 @@
+/* In your main global CSS file (e.g., src/index.css) */
+
+/* 
+  This is a minimal version of Tailwind's preflight.
+  It ensures consistent font rendering and box-sizing.
+*/
+html {
+  -webkit-font-smoothing: antialiased; /* Key for macOS/Linux/WSL2 */
+  -moz-osx-font-smoothing: grayscale; /* Key for Firefox */
+  -webkit-text-size-adjust: 100%;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+*,
+::before,
+::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e5e7eb; /* or your theme's border color */
+}
+
+body {
+  margin: 0;
+  line-height: inherit;
+}
 @import "tailwindcss";
+
 
 @tailwind base;
 @tailwind components;
