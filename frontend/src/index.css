@@ -1,7 +1,8 @@
+@import "tailwindcss";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 :root {
     --bg: #000000;
     --panel: #0e0e0f;

@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useMemo, useState, useEffect } from 'react'
 import LeftNavigator from './components/LeftNavigator'
-import ChatWindow from './components/ChatWindow'
+import ChatPage from './pages/ChatPage'
 import SettingsPage from './pages/SettingsPage'
 import LibraryPage from './pages/LibraryPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -240,16 +240,10 @@ function App() {
       )}
 
       <Routes>
-        <Route
-          path="/"
-          element={<ChatWindow messages={messages} onSend={handleSend} onOpenNav={() => setIsMobileNavOpen(true)} />}
-        />
+        <Route path="/" element={<ChatPage messages={messages} onSend={handleSend} onOpenNav={() => setIsMobileNavOpen(true)} />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/library" element={<LibraryPage />} />
-        <Route
-          path="/chat/:id"
-          element={<ChatWindow messages={messages} onSend={handleSend} onOpenNav={() => setIsMobileNavOpen(true)} />}
-        />
+        <Route path="/chat/:id" element={<ChatPage messages={messages} onSend={handleSend} onOpenNav={() => setIsMobileNavOpen(true)} />} />
         <Route path="/home" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

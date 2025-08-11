@@ -1,10 +1,10 @@
-import PropTypes from 'prop-types'
-import { useMemo, useState, useRef, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import AxonIcon from '../assets/Axon-icon.png'
-import ContextMenu from './ContextMenu'
-import { ConfirmDialog } from './Modal'
-
+import { Settings, FolderClosed } from 'lucide-react'
+ import PropTypes from 'prop-types'
+ import { useMemo, useState, useRef, useEffect } from 'react'
+ import { Link, useLocation } from 'react-router-dom'
+ import AxonIcon from '../assets/Axon-icon.png'
+ import ContextMenu from './ContextMenu'
+ import { ConfirmDialog } from './Modal'
 function IconButton({ label, onClick, children, noExpand = false }) {
   return (
     <button
@@ -187,19 +187,12 @@ export default function LeftNavigator({
               }
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M12 11v6M9 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </IconButton>
-          <Link to="/settings" aria-label="Settings" className="icon-button" noExpand title="Settings">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="2" />
-              <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.7l-.1.4a2 2 0 1 1-4 0l-.1-.4a1 1 0  0 0-.6-.7 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.7-.6l-.4-.1a2 2 0 1 1 0-4l.4-.1a1 1 0 0 0 .7-.6 1 1 0 0 0-.2-1.1l-.1-.1A2 2 0 1 1 6.8 4l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.7l.1-.4a2 2 0 1 1 4 0l.1.4a1 1 0 0 0 .6.7 1 1 0 0 0 1.1-.2l.1-.1A2 2 0 1 1 21 6.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .7.6l.4.1a2 2 0 1 1 0 4l-.4.1a1 1 0 0 0-.7.6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </Link>
-        </div>
-
+            <FolderClosed size={18} />
+           </IconButton>
+           <Link to="/settings" aria-label="Settings" className="icon-button" noExpand title="Settings">
+             <Settings size={18} />
+           </Link>
+         </div>
         {/* Vertical rail in collapsed state */}
         <div className="left-nav__rail">
           <IconButton label="New chat" noExpand onClick={() => onNewConversation(selectedFolderId)}>
@@ -208,29 +201,22 @@ export default function LeftNavigator({
             </svg>
           </IconButton>
           <IconButton label="New folder" onClick={() => {
-            if (isCollapsed) {
-              onPin?.()
-            }
-            const id = onCreateFolder?.()
-            if (id) {
-              setEditingFolderId(id)
-              setEditingName('Untitled')
-              setSelectedFolderId(id)
-            }
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M12 11v6M9 14h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </IconButton>
-          <Link to="/settings" aria-label="Settings" className="icon-button" title="Settings">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="2" />
-              <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0  0 0-.6.7l-.1.4a2 2 0 1 1-4 0l-.1-.4a1 1 0 0 0-.6-.7 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.7-.6l-.4-.1a2 2 0 1 1 0-4l.4-.1a1 1 0 0 0 .7-.6 1 1 0 0 0-.2-1.1l-.1-.1A2 2 0 1 1 6.8 4l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.7l.1-.4a2 2 0 1 1 4 0l.1.4a1 1 0 0 0 .6.7 1 1 0 0 0 1.1-.2l.1-.1A2 2 0 1 1 21 6.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .7.6l.4.1a2 2 0 1 1 0 4l-.4.1a1 1 0 0 0-.7.6Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </Link>
-        </div>
-      </div>
+             if (isCollapsed) {
+               onPin?.()
+             }
+             const id = onCreateFolder?.()
+             if (id) {
+               setEditingFolderId(id)
+               setEditingName('Untitled')
+               setSelectedFolderId(id)
+             }
+           }}>
+             <FolderClosed size={18} />
+           </IconButton>
+           <Link to="/settings" aria-label="Settings" className="icon-button" title="Settings">
+             <Settings size={18} />
+           </Link>
+         </div>      </div>
 
       <div className="left-nav__label">Conversations</div>
 
@@ -271,14 +257,11 @@ export default function LeftNavigator({
                       }}
                     >
                       <span className="folder__icon" aria-hidden>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                      </span>
-                      {editingFolderId === folder.id ? (
-                        <input
-                          ref={inputRef}
-                          className="folder__input"
+                         <FolderClosed size={16} />
+                       </span>
+                       {editingFolderId === folder.id ? (
+                         <input
+                           ref={inputRef}                          className="folder__input"
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
                           onBlur={commitEdit}

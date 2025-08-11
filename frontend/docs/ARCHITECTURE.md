@@ -26,9 +26,15 @@ frontend/
 
     components/            # Reusable UI components
       LeftNavigator.jsx    # Side panel: actions + conversation list
-      ChatWindow.jsx       # Chat message list + composer
+      chat/                # Chat UI building blocks (used by ChatPage)
+        ChatHeader.jsx
+        MessageList.jsx
+        EmptyHero.jsx
+        PromptBar.jsx
+        Composer.jsx
 
     pages/                 # Routed pages (screen-level components)
+      ChatPage.jsx         # Chat screen composed of chat/* components
       SettingsPage.jsx     # App settings (API keys, models, preferences)
       LibraryPage.jsx      # Docs/prompts/tools library
       NotFoundPage.jsx     # 404 guard
@@ -81,7 +87,7 @@ Route → Page → (Hooks) → Services → API
 - Existing global CSS in `src/index.css` remains for custom theming variables and bespoke animations. Gradually replace with Tailwind utilities as needed.
 
 ### Conventions
-- Files are PascalCase for components (`ChatWindow.jsx`), camelCase for utilities (`formatters.js`).
+- Files are PascalCase for components (`ChatPage.jsx`, `MessageList.jsx`), camelCase for utilities (`formatters.js`).
 - Export one primary component per file (default export).
 - Use PropTypes for shared/public components.
 - Keep network effects inside `services/`; keep React logic in hooks/components.
@@ -119,7 +125,8 @@ The left navigator folders support right-click to Rename/Delete. Deleting a fold
 
 ### Chat Example: Where Things Live
 - Conversation list and actions: `src/components/LeftNavigator.jsx`
-- Chat messages + composer: `src/components/ChatWindow.jsx`
+- Chat screen: `src/pages/ChatPage.jsx`
+- Chat UI parts: `src/components/chat/*`
 - Message sending (placeholder): `src/services/chatService.js`
 - Fetch conversations (placeholder): `src/hooks/useConversations.js`
 
@@ -136,7 +143,7 @@ The left navigator folders support right-click to Rename/Delete. Deleting a fold
 
 ### Roadmap Notes
 - Replace placeholder services with real API endpoints.
-- Hook `ChatWindow` to route `/chat/:id` via `useParams`.
+- Hook `ChatPage` to route `/chat/:id` via `useParams`.
 - Implement settings form bound to `AppStateContext`.
 - Add feature folder structure as modules grow (chat, settings, library, auth, etc.).
 
