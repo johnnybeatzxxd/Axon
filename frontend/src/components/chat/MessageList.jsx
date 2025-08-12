@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types'
-import { useEffect, useRef } from 'react'
+import React, { memo, useEffect, useRef } from 'react'
 
-export default function MessageList({ messages }) {
+function MessageList({ messages }) {
   const listRef = useRef(null)
 
   useEffect(() => {
@@ -35,4 +35,4 @@ MessageList.propTypes = {
   ).isRequired,
 }
 
-
+export default memo(MessageList)

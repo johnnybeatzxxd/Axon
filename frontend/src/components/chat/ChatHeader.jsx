@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types'
+import React, { memo } from 'react'
 
-export default function ChatHeader({ selectedModel, models, onChangeModel, onOpenNav, onExportConversation }) {
+function ChatHeader({ selectedModel, models, onChangeModel, onOpenNav, onExportConversation }) {
   return (
     <div className="chat-header">
       <div className="chat-header__inner">
@@ -49,4 +50,4 @@ ChatHeader.propTypes = {
   onExportConversation: PropTypes.func,
 }
 
-
+export default memo(ChatHeader)

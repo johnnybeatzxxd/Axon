@@ -1,7 +1,8 @@
+import React, { memo } from 'react'
 import { LampContainer } from '../ui/lamp'
 import PropTypes from 'prop-types'
 
-export default function EmptyHero({ isExiting }) {
+function EmptyHero({ isExiting }) {
   return (
     <div className={isExiting ? 'empty-hero empty-hero--exit' : 'empty-hero'} aria-live="polite">
       <div className="absolute inset-0 z-0 pointer-events-none -translate-y-36" aria-hidden>
@@ -25,4 +26,4 @@ EmptyHero.propTypes = {
   isExiting: PropTypes.bool,
 }
 
-
+export default memo(EmptyHero)

@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { motion } from "framer-motion"; // Note: The original used "motion/react", but framer-motion is the standard
+import { motion } from "motion/react";
 import styles from "./Lamp.module.css";
 
 // This is a simple demo of how to use the LampContainer

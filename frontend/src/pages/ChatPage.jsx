@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, useEffect, useMemo, useRef, useState } from 'react'
 import ChatHeader from '../components/chat/ChatHeader'
 import MessageList from '../components/chat/MessageList'
 import EmptyHero from '../components/chat/EmptyHero'
@@ -13,7 +13,7 @@ const QUICK_PROMPTS = [
   'Explain WebSockets to a beginner',
 ]
 
-export default function ChatPage({ messages, onSend, onExportConversation, onOpenNav }) {
+function ChatPage({ messages, onSend, onExportConversation, onOpenNav }) {
   const composerRef = useRef(null)
   const [showEmptyHero, setShowEmptyHero] = useState(!messages || messages.length === 0)
   const [isExitingHero, setIsExitingHero] = useState(false)
@@ -102,4 +102,4 @@ ChatPage.propTypes = {
   onOpenNav: PropTypes.func,
 }
 
-
+export default memo(ChatPage)

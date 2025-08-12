@@ -1,6 +1,6 @@
 import { Settings, FolderClosed } from 'lucide-react'
- import PropTypes from 'prop-types'
- import { useMemo, useState, useRef, useEffect } from 'react'
+import PropTypes from 'prop-types'
+import React, { memo, useMemo, useState, useRef, useEffect, useCallback } from 'react'
  import { Link, useLocation } from 'react-router-dom'
  import AxonIcon from '../assets/Axon-icon.png'
  import ContextMenu from './ContextMenu'
@@ -26,7 +26,7 @@ IconButton.propTypes = {
   noExpand: PropTypes.bool,
 }
 
-export default function LeftNavigator({
+function LeftNavigator({
   conversations,
   activeConversationId,
   onSelectConversation,
@@ -132,6 +132,11 @@ export default function LeftNavigator({
     setEditingConvTitle('')
   }
 
+  const handleSelectConversation = useCallback((id) => {
+    if (id === activeConversationId) return
+    onSelectConversation(id)
+  }, [onSelectConversation, activeConversationId])
+
   return (
     <aside
       className={
@@ -230,24 +235,48 @@ export default function LeftNavigator({
                   key={folder.id}
                   draggable
                   onDragStart={(e) => {
-                    e.dataTransfer.setData('text/plain', String(index))
+                    // Begin folder drag only if the drag originates from folder header/background, not from a conversation
+                    // Allow drag by header via data attribute check; otherwise stop propagation on conversation rows
+                    e.dataTransfer.setData('drag-type', 'folder')
+                    e.dataTransfer.setData('text/folder-index', String(index))
                   }}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault()
-                    const fromIndex = Number(e.dataTransfer.getData('text/plain'))
-                    if (Number.isNaN(fromIndex)) return
-                    const toIndex = index
-                    if (fromIndex === toIndex) return
-                    const next = [...sortedFolders]
-                    const [moved] = next.splice(fromIndex, 1)
-                    next.splice(toIndex, 0, moved)
-                    onReorderFolders?.(next)
+                    const dragType = e.dataTransfer.getData('drag-type')
+                    if (dragType === 'folder') {
+                      const fromIndexStr = e.dataTransfer.getData('text/folder-index')
+                      const fromIndex = Number(fromIndexStr)
+                      if (Number.isNaN(fromIndex)) return
+                      const toIndex = index
+                      if (fromIndex === toIndex) return
+                      const next = [...sortedFolders]
+                      const [moved] = next.splice(fromIndex, 1)
+                      next.splice(toIndex, 0, moved)
+                      onReorderFolders?.(next)
+                    } else {
+                      // If a conversation is dropped over the folder wrapper, move it here
+                      const convId = e.dataTransfer.getData('text/conv-id') || e.dataTransfer.getData('text/plain')
+                      if (convId) onMoveConversationToFolder?.(convId, folder.id)
+                    }
                   }}
                 >
-                  <div className={selectedFolderId === folder.id ? 'folder folder--selected' : 'folder'}>
+                  <div className={selectedFolderId === folder.id ? 'folder folder--selected' : 'folder'}
+                       onDragOver={(e) => e.preventDefault()}
+                       onDrop={(e) => {
+                         const convId = e.dataTransfer.getData('text/conv-id') || e.dataTransfer.getData('text/plain')
+                         if (!convId) return
+                         onMoveConversationToFolder?.(convId, folder.id)
+                       }}
+                  >
                     <div
                       className="folder__header"
+                      draggable
+                      onDragStart={(e) => {
+                        // Explicitly mark header drags as folder drags
+                        e.dataTransfer.setData('drag-type', 'folder')
+                        e.dataTransfer.setData('text/folder-index', String(index))
+                      }}
                       onClick={() => setSelectedFolderId(folder.id)}
                       onDoubleClick={beginEditFolder(folder.id, folder.name)}
                       onContextMenu={(e) => {
@@ -260,8 +289,9 @@ export default function LeftNavigator({
                          <FolderClosed size={16} />
                        </span>
                        {editingFolderId === folder.id ? (
-                         <input
-                           ref={inputRef}                          className="folder__input"
+                          <input
+                            ref={inputRef}
+                            className="folder__input"
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
                           onBlur={commitEdit}
@@ -282,14 +312,27 @@ export default function LeftNavigator({
                         if (!conv) return null
                         const isActive = conv.id === activeConversationId
                         return (
-                          <div key={conv.id} className={isActive ? 'conversation conversation--active' : 'conversation'}>
+                          <div
+                            key={conv.id}
+                            className={isActive ? 'conversation conversation--active' : 'conversation'}
+                            draggable
+                            onDragStart={(e) => {
+                              // Start dragging this conversation (not the folder)
+                              e.stopPropagation()
+                              e.dataTransfer.effectAllowed = 'move'
+                              e.dataTransfer.setData('text/conv-id', conv.id)
+                              e.dataTransfer.setData('text/plain', conv.id)
+                            }}
+                          >
                             <button
                               className="conversation__main"
                               onMouseDown={(e) => {
-                                // Select immediately on primary-button press to avoid parent handlers interfering
-                                if (e.button === 0) onSelectConversation(conv.id)
+                                if (e.button !== 0) return
+                                if (conv.id !== activeConversationId) onSelectConversation(conv.id)
                               }}
-                              onClick={() => onSelectConversation(conv.id)}
+                              onClick={() => {
+                                if (conv.id !== activeConversationId) onSelectConversation(conv.id)
+                              }}
                             >
                               <span className="conversation__icon" aria-hidden>
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -323,10 +366,10 @@ export default function LeftNavigator({
                               className="menu-trigger"
                                 aria-label="More actions"
                                 title="More"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setOpenMenuConvId((v) => (v === conv.id ? null : conv.id))
-                                }}
+                               onClick={(e) => {
+                                 e.stopPropagation()
+                                 setOpenMenuConvId((v) => (v === conv.id ? null : conv.id))
+                               }}
                               >
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path d="M12 13a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm-6 0a1 1 0 1 1 0-2 1 1 0  0 1 0 2Zm12 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" fill="currentColor" />
@@ -334,11 +377,11 @@ export default function LeftNavigator({
                               </button>
                               <div className="menu">
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setOpenMenuConvId(null)
-                                    onSelectConversation(conv.id)
-                                  }}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setOpenMenuConvId(null)
+                                        handleSelectConversation(conv.id)
+                                      }}
                                 >
                                   Open
                                 </button>
@@ -373,19 +416,43 @@ export default function LeftNavigator({
 
           {/* Unfiled conversations */}
           <ul className="conversation-list" role="list" aria-label="Unfiled">
-            {sortedConversations
+             {sortedConversations
               .filter((c) => !folders.some((f) => f.conversationIds.includes(c.id)))
               .map((c) => {
                 const isActive = c.id === activeConversationId
                 return (
                   <li key={c.id}>
-                    <div className={isActive ? 'conversation conversation--active' : 'conversation'}>
+                    {/* Make only the conversation row draggable, not the whole list item */}
+                    <div className={isActive ? 'conversation conversation--active' : 'conversation'}
+                         onDragOver={(e) => e.preventDefault()}
+                         onDrop={(e) => {
+                           // Dropping a chat onto the empty area (outside any folder) → create Untitled and move
+                           // We only act when drop target is the unfiled list container background
+                           const convId = e.dataTransfer.getData('text/conv-id') || e.dataTransfer.getData('text/plain')
+                           if (!convId) return
+                           // If dropped directly on another conversation tile, skip here; folder drops handled above
+                           if (convId === c.id) return
+                           // Create or reuse Untitled folder and move the dragged conv into it
+                           const id = onCreateFolder?.()
+                           const folderId = id || null
+                           if (folderId) onMoveConversationToFolder?.(convId, folderId)
+                         }}
+                    >
                       <button
                         className="conversation__main"
-                        onMouseDown={(e) => {
-                          if (e.button === 0) onSelectConversation(c.id)
+                        draggable
+                        onDragStart={(e) => {
+                          e.stopPropagation()
+                          e.dataTransfer.effectAllowed = 'move'
+                          e.dataTransfer.setData('drag-type', 'conversation')
+                          e.dataTransfer.setData('text/conv-id', c.id)
+                          e.dataTransfer.setData('text/plain', c.id)
                         }}
-                        onClick={() => onSelectConversation(c.id)}
+                        onMouseDown={(e) => {
+                          if (e.button !== 0) return
+                          if (c.id !== activeConversationId) onSelectConversation(c.id)
+                        }}
+                        onClick={() => handleSelectConversation(c.id)}
                       >
                         <span className="conversation__icon" aria-hidden>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -430,11 +497,11 @@ export default function LeftNavigator({
                         </button>
                         <div className="menu">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setOpenMenuConvId(null)
-                              onSelectConversation(c.id)
-                            }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenMenuConvId(null)
+                                handleSelectConversation(c.id)
+                              }}
                           >
                             Open
                           </button>
@@ -567,4 +634,4 @@ LeftNavigator.propTypes = {
   onRequestCloseDrawer: PropTypes.func,
 }
 
-
+export default memo(LeftNavigator)

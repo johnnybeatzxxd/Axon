@@ -1,12 +1,42 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useMemo, useState, useEffect } from 'react'
+import { Routes, Route, Navigate, useParams, useNavigate } from 'react-router-dom'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import LeftNavigator from './components/LeftNavigator'
-import ChatPage from './pages/ChatPage'
-import SettingsPage from './pages/SettingsPage'
-import LibraryPage from './pages/LibraryPage'
-import NotFoundPage from './pages/NotFoundPage'
+import { routes } from './router/routes'
+import { ChatProvider, useChat } from './features/chat/ChatProvider'
 
-function App() {
+// Module-level chat route element to keep component identity stable across renders
+function ChatRouteElement({ openNav, onFirstMessage, messages, sendMessage }) {
+  const { id } = useParams()
+  const {
+    conversations,
+    activeConversationId,
+    setActiveConversationId,
+  } = useChat()
+
+  useEffect(() => {
+    if (!id) return
+    if (conversations.some((c) => c.id === id) && id !== activeConversationId) {
+      setActiveConversationId(id)
+    }
+  }, [id, conversations, activeConversationId, setActiveConversationId])
+
+  const ChatPage = routes.find((r) => r.isChat)?.component
+  return (
+    <ChatPage
+      messages={messages}
+      onSend={(text) => {
+        const wasEmpty = (messages?.length || 0) === 0
+        sendMessage(text)
+        // If this was the first message in the conversation, update URL immediately
+        if (wasEmpty) onFirstMessage()
+      }}
+      onOpenNav={openNav}
+    />
+  )
+}
+
+function AppShell() {
+  const navigate = useNavigate()
   const [isNavCollapsed, setIsNavCollapsed] = useState(true)
   const [isNavPinned, setIsNavPinned] = useState(false)
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
@@ -20,175 +50,27 @@ function App() {
     return () => window.removeEventListener('resize', onResize)
   }, [isMobileNavOpen])
 
-  // Initialize with a fresh "New chat" every time the app loads
-  const initialConversationId = useMemo(() => crypto.randomUUID(), [])
-  const [conversations, setConversations] = useState(() => [
-    { id: initialConversationId, title: 'New chat', lastMessage: '', updatedAt: Date.now() },
-  ])
-  const [activeConversationId, setActiveConversationId] = useState(initialConversationId)
-  const [messagesByConversation, setMessagesByConversation] = useState(() => ({
-    [initialConversationId]: [],
-  }))
+  const {
+    conversations,
+    activeConversationId,
+    setActiveConversationId,
+    messagesByConversation,
+    messages,
+    folders,
+    createConversation,
+    createFolder,
+    moveConversationToFolder,
+    renameFolder,
+    renameConversation,
+    deleteConversation,
+    reorderFolders,
+    deleteFolder,
+    sendMessage,
+  } = useChat()
 
-  // Start with no folders (remove hard-coded "Ideas" folder)
-  const [folders, setFolders] = useState([])
+  const openNav = useCallback(() => setIsMobileNavOpen(true), [])
 
-  function truncateTitleFromMessage(message) {
-    const max = 24
-    const trimmed = message.trim()
-    if (trimmed.length <= max) return trimmed
-    const slice = trimmed.slice(0, max)
-    const lastSpace = slice.lastIndexOf(' ')
-    return (lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trim() + '…'
-  }
-
-  const messages = useMemo(() => messagesByConversation[activeConversationId] || [], [messagesByConversation, activeConversationId])
-
-  function handleSend(text) {
-    const id = crypto.randomUUID()
-    setMessagesByConversation((prev) => ({
-      ...prev,
-      [activeConversationId]: [...(prev[activeConversationId] || []), { id, role: 'user', text }],
-    }))
-    setConversations((prev) => prev.map((c) => {
-      if (c.id !== activeConversationId) return c
-      const nextTitle = (!c.title || c.title === 'New chat') ? truncateTitleFromMessage(text) : c.title
-      return { ...c, title: nextTitle, lastMessage: text, updatedAt: Date.now() }
-    }))
-
-    // Move conversation to top within its folder and move that folder to top
-    setFolders((prev) => {
-      const index = prev.findIndex((f) => f.conversationIds.includes(activeConversationId))
-      if (index === -1) return prev
-      const folder = prev[index]
-      const newConvIds = [activeConversationId, ...folder.conversationIds.filter((cid) => cid !== activeConversationId)]
-      const updatedFolder = { ...folder, conversationIds: newConvIds }
-      const next = [...prev]
-      next.splice(index, 1)
-      next.unshift(updatedFolder)
-      return next
-    })
-  }
-
-  function handleNewConversation(targetFolderId) {
-    const id = crypto.randomUUID()
-    const title = 'New chat'
-    const newConv = { id, title, lastMessage: '', updatedAt: Date.now() }
-    setConversations((prev) => [newConv, ...prev])
-    setMessagesByConversation((prev) => ({ ...prev, [id]: [] }))
-    setActiveConversationId(id)
-    // Place into target folder or Untitled
-    setFolders((prev) => {
-      const next = [...prev]
-      if (targetFolderId) {
-        const index = next.findIndex((f) => f.id === targetFolderId)
-        if (index !== -1) {
-          const folder = next[index]
-          const updatedFolder = { ...folder, conversationIds: [id, ...folder.conversationIds] }
-          next.splice(index, 1)
-          next.unshift(updatedFolder)
-          return next
-        }
-      }
-      // Fallback to Untitled
-      let untitled = next.find((f) => f.name === 'Untitled')
-      if (!untitled) {
-        const newFolder = { id: crypto.randomUUID(), name: 'Untitled', conversationIds: [id] }
-        next.unshift(newFolder)
-        return next
-      }
-      return next.map((f) =>
-        f.id === untitled.id ? { ...f, conversationIds: [id, ...f.conversationIds] } : f
-      )
-    })
-  }
-
-  function handleOpenSettings() {
-    alert('Settings panel coming soon')
-  }
-
-  function handleCreateFolder() {
-    const existingUntitled = folders.find(
-      (f) => f.name === 'Untitled' && (!f.conversationIds || f.conversationIds.length === 0)
-    )
-    if (existingUntitled) {
-      return existingUntitled.id
-    }
-    const id = crypto.randomUUID()
-    setFolders((prev) => [{ id, name: 'Untitled', conversationIds: [] }, ...prev])
-    return id
-  }
-
-  function handleMoveConversationToFolder(conversationId, folderId) {
-    setFolders((prev) => {
-      // Remove from all folders first
-      const removed = prev.map((f) => ({
-        ...f,
-        conversationIds: f.conversationIds.filter((id) => id !== conversationId),
-      }))
-      if (!folderId) return removed
-      return removed.map((f) =>
-        f.id === folderId
-          ? { ...f, conversationIds: Array.from(new Set([...
-              f.conversationIds,
-              conversationId,
-            ])) }
-          : f
-      )
-    })
-  }
-
-  function handleRenameFolder(folderId, newName) {
-    const name = ((newName ?? '').trim() || 'Untitled').slice(0, 20)
-    setFolders((prev) => prev.map((f) => (f.id === folderId ? { ...f, name } : f)))
-  }
-
-  function handleRenameConversation(conversationId, newTitle) {
-    const title = (newTitle ?? '').trim() || 'New chat'
-    setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, title } : c)))
-  }
-
-  function handleDeleteConversation(conversationId) {
-    setConversations((prev) => prev.filter((c) => c.id !== conversationId))
-    setMessagesByConversation((prev) => {
-      const next = { ...prev }
-      delete next[conversationId]
-      return next
-    })
-    setFolders((prev) => prev.map((f) => ({ ...f, conversationIds: f.conversationIds.filter((id) => id !== conversationId) })))
-    if (activeConversationId === conversationId) {
-      const first = conversations.find((c) => c.id !== conversationId)?.id || null
-      setActiveConversationId(first)
-    }
-  }
-
-  function handleDeleteFolder(folderId) {
-    const folder = folders.find((f) => f.id === folderId)
-    if (!folder) return
-    const toDelete = new Set(folder.conversationIds)
-    // Remove folder
-    setFolders((prev) => prev.filter((f) => f.id !== folderId))
-    // Remove conversations and messages inside the folder
-    if (toDelete.size > 0) {
-      setConversations((prev) => {
-        const remaining = prev.filter((c) => !toDelete.has(c.id))
-        if (toDelete.has(activeConversationId)) {
-          const nextActive = remaining[0]?.id || null
-          setActiveConversationId(nextActive)
-        }
-        return remaining
-      })
-      setMessagesByConversation((prev) => {
-        const next = { ...prev }
-        for (const id of toDelete) delete next[id]
-        return next
-      })
-    }
-  }
-
-  function handleReorderFolders(nextFolders) {
-    setFolders(nextFolders)
-  }
+  // (removed shadowing inner ChatRouteElement)
 
   return (
     <div className={isNavCollapsed ? 'app app--nav-collapsed' : 'app'}>
@@ -197,36 +79,32 @@ function App() {
         activeConversationId={activeConversationId}
         onSelectConversation={(id) => {
           setActiveConversationId(id)
-          // navigate handled by link buttons in the nav in future
           if (isMobileNavOpen) setIsMobileNavOpen(false)
+          const hasMessages = (messagesByConversation?.[id]?.length || 0) > 0
+          navigate(hasMessages ? `/chat/${id}` : `/`)
         }}
-        onNewConversation={handleNewConversation}
-        onOpenSettings={handleOpenSettings}
+        onNewConversation={(targetFolderId) => {
+          const newId = createConversation(targetFolderId)
+          // Navigate to root for new chats - they get an ID in URL only after first message
+          // The new chat is already set as active in the provider, so navigation will work correctly
+          navigate(`/`)
+        }}
+        onOpenSettings={() => alert('Settings panel coming soon')}
         folders={folders}
-        onCreateFolder={handleCreateFolder}
-        onMoveConversationToFolder={handleMoveConversationToFolder}
-        onRenameFolder={handleRenameFolder}
-        onRenameConversation={handleRenameConversation}
-        onDeleteConversation={handleDeleteConversation}
-        onReorderFolders={handleReorderFolders}
+        onCreateFolder={createFolder}
+        onMoveConversationToFolder={moveConversationToFolder}
+        onRenameFolder={renameFolder}
+        onRenameConversation={renameConversation}
+        onDeleteConversation={deleteConversation}
+        onReorderFolders={reorderFolders}
         isCollapsed={isNavCollapsed}
         onToggleCollapsed={() => setIsNavCollapsed((v) => !v)}
         isPinned={isNavPinned}
-        onPin={() => {
-          setIsNavPinned(true)
-          setIsNavCollapsed(false)
-        }}
-        onUnpin={() => {
-          setIsNavPinned(false)
-          setIsNavCollapsed(true)
-        }}
-        onHoverEnter={() => {
-          if (!isNavPinned) setIsNavCollapsed(false)
-        }}
-        onHoverLeave={() => {
-          if (!isNavPinned) setIsNavCollapsed(true)
-        }}
-        onDeleteFolder={handleDeleteFolder}
+        onPin={() => { setIsNavPinned(true); setIsNavCollapsed(false) }}
+        onUnpin={() => { setIsNavPinned(false); setIsNavCollapsed(true) }}
+        onHoverEnter={() => { if (!isNavPinned) setIsNavCollapsed(false) }}
+        onHoverLeave={() => { if (!isNavPinned) setIsNavCollapsed(true) }}
+        onDeleteFolder={deleteFolder}
         isDrawerOpen={isMobileNavOpen}
         onRequestCloseDrawer={() => setIsMobileNavOpen(false)}
       />
@@ -239,16 +117,37 @@ function App() {
         />
       )}
 
-      <Routes>
-        <Route path="/" element={<ChatPage messages={messages} onSend={handleSend} onOpenNav={() => setIsMobileNavOpen(true)} />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/library" element={<LibraryPage />} />
-        <Route path="/chat/:id" element={<ChatPage messages={messages} onSend={handleSend} onOpenNav={() => setIsMobileNavOpen(true)} />} />
-        <Route path="/home" element={<Navigate to="/" replace />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
+      <Suspense fallback={null}>
+        <Routes>
+          {routes.map(({ path, component: Component, isChat }) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                isChat ? (
+                  <ChatRouteElement 
+                    openNav={openNav} 
+                    onFirstMessage={() => navigate(`/chat/${activeConversationId}`)} 
+                    messages={messages}
+                    sendMessage={sendMessage}
+                  />
+                ) : (
+                  <Component />
+                )
+              }
+            />
+          ))}
+          <Route path="/home" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </div>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <ChatProvider>
+      <AppShell />
+    </ChatProvider>
+  )
+}
