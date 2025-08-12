@@ -5,6 +5,7 @@ import ChatPage from './pages/ChatPage'
 import SettingsPage from './pages/SettingsPage'
 import LibraryPage from './pages/LibraryPage'
 import NotFoundPage from './pages/NotFoundPage'
+import { websocketService } from './services/websocketService'
 
 function App() {
   const [isNavCollapsed, setIsNavCollapsed] = useState(true)
@@ -33,6 +34,30 @@ function App() {
   // Start with no folders (remove hard-coded "Ideas" folder)
   const [folders, setFolders] = useState([])
 
+  useEffect(() => {
+    websocketService.onMessage((message) => {
+      if (message.event === 'waiting_message') {
+        return;
+      }
+      setMessagesByConversation((prev) => {
+        const activeMessages = prev[activeConversationId] || [];
+        const existingMessageIndex = activeMessages.findIndex((m) => m.id === message.id);
+        if (existingMessageIndex !== -1) {
+          const updatedMessages = [...activeMessages];
+          const existingMessage = updatedMessages[existingMessageIndex];
+          const updatedMessage = {
+            ...existingMessage,
+            parts: [...existingMessage.parts, ...message.parts],
+          };
+          updatedMessages[existingMessageIndex] = updatedMessage;
+          return { ...prev, [activeConversationId]: updatedMessages };
+        } else {
+          return { ...prev, [activeConversationId]: [...activeMessages, message] };
+        }
+      });
+    });
+  }, [activeConversationId]);
+
   function truncateTitleFromMessage(message) {
     const max = 24
     const trimmed = message.trim()
@@ -46,15 +71,26 @@ function App() {
 
   function handleSend(text) {
     const id = crypto.randomUUID()
+    const userMessage = {
+      id,
+      role: 'user',
+      parts: [{ type: 'text', text }],
+    };
+
     setMessagesByConversation((prev) => ({
       ...prev,
-      [activeConversationId]: [...(prev[activeConversationId] || []), { id, role: 'user', text }],
+      [activeConversationId]: [...(prev[activeConversationId] || []), userMessage],
     }))
     setConversations((prev) => prev.map((c) => {
       if (c.id !== activeConversationId) return c
       const nextTitle = (!c.title || c.title === 'New chat') ? truncateTitleFromMessage(text) : c.title
       return { ...c, title: nextTitle, lastMessage: text, updatedAt: Date.now() }
     }))
+
+    websocketService.send({
+      request_id: "conversation",
+      payload: { message: text },
+    });
 
     // Move conversation to top within its folder and move that folder to top
     setFolders((prev) => {

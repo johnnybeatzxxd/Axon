@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 from typing import Any, Dict, List, Optional
+import uuid
 
 from .tooling import format_mcp_tools_for_db, build_available_tools
 from ..rag.set_vector_db import save_tools_to_vector_db
@@ -54,8 +55,18 @@ class ChatOrchestrator:
             }
         ]
 
-    async def process_query(self, query: str, session) -> str:
+    async def send_message_part(self, message_id: str, role: str, part: Dict[str, Any]):
+        if self.websocket:
+            message = {
+                "id": message_id,
+                "role": role,
+                "parts": [part],
+            }
+            await self.websocket.send_json(message)
+
+    async def process_query(self, query: str, session):
         self.messages.append({"role": "user", "content": query})
+        message_id = str(uuid.uuid4())
         try:
             try:
                 mcp_tools_list = await session.list_tools()
@@ -69,11 +80,9 @@ class ChatOrchestrator:
 
             print(f"Relevant tool names: {relevant_tools}")
             available_tools = build_available_tools(mcp_tools_list, relevant_tools, self.custom_tools)
-            final_text: List[str] = []
             is_response_ready = False
 
-            if self.websocket:
-                await self.websocket.send_json({"log": f"{len(available_tools)} tool are passed!"})
+            await self.send_message_part(message_id, "assistant", {"type": "reasoning", "text": "I will plan the sections and verify styling approach."})
 
             while not is_response_ready:
                 print("Calling LLM...")
@@ -87,14 +96,13 @@ class ChatOrchestrator:
                         )
                 except Exception as e:
                     print(f"LLM generate error: {e}")
-                    if self.websocket:
-                        await self.websocket.send_json({"log": f"LLM error: {e}"})
+                    await self.send_message_part(message_id, "assistant", {"type": "text", "text": f"LLM error: {e}"})
                     raise
 
                 restart_while_loop = False
                 for content in response.choices:
                     if content.finish_reason == "stop":
-                        final_text.append(content.message.content or "")
+                        await self.send_message_part(message_id, "assistant", {"type": "text", "text": content.message.content or ""})
                         self.messages.append({"role": "assistant", "content": content.message.content})
                         is_response_ready = True
 
@@ -106,8 +114,12 @@ class ChatOrchestrator:
                             tool_args = tool.function.arguments
                             tool_id = tool.id
                             print(f"calling {tool_name} with args {tool_args}")
-                            if self.websocket:
-                                await self.websocket.send_json({"log": f"Calling tool {tool_name} with {tool_args} args"})
+
+                            await self.send_message_part(message_id, "assistant", {
+                                "type": "tools",
+                                "header": {"type": "web.search", "state": "running"},
+                                "input": {"query": tool_args}
+                            })
 
                             if tool_registry.has(tool_name):
                                 parsed_args = {}
@@ -137,7 +149,12 @@ class ChatOrchestrator:
                                 result = await session.call_tool(tool_name, parsed_args)
                                 result = result.content
 
-                            final_text.append(f"[Calling tool {tool_name} with args {parsed_args}]")
+                            await self.send_message_part(message_id, "assistant", {
+                                "type": "tools",
+                                "header": {"type": "web.search", "state": "output-available"},
+                                "input": {"query": tool_args},
+                                "output": result
+                            })
 
                             self.messages.append(
                                 {
@@ -168,11 +185,9 @@ class ChatOrchestrator:
 
                 if restart_while_loop:
                     continue
-
-            return "\n".join(final_text)
         except Exception as e:
             print(f"process_query error: {e}")
-            return ""
+            await self.send_message_part(message_id, "assistant", {"type": "text", "text": f"An error occurred: {e}"})
 
     async def chat_loop(self, session, manager, websocket: Optional[WebSocket]):
         print("\nMCP Client Started!")
@@ -195,13 +210,8 @@ class ChatOrchestrator:
                 if query.lower() == "quit":
                     break
 
-                response = await self.process_query(query, session)
-                print("\n" + (response or ""))
-                if self.websocket:
-                    await self.websocket.send_json({"response": response})
+                await self.process_query(query, session)
 
             except Exception as e:
                 print(f"chat_loop error: {e}")
                 return
-
-

@@ -94,7 +94,11 @@ ChatPage.propTypes = {
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       role: PropTypes.oneOf(['user', 'assistant']).isRequired,
-      text: PropTypes.string.isRequired,
+      parts: PropTypes.arrayOf(
+        PropTypes.shape({
+          type: PropTypes.string.isRequired,
+        })
+      ).isRequired,
     })
   ).isRequired,
   onSend: PropTypes.func.isRequired,
