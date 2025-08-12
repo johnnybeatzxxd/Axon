@@ -57,6 +57,8 @@ class ChatOrchestrator:
 
     async def send_message_part(self, message_id: str, role: str, part: Dict[str, Any]):
         if self.websocket:
+            if "part_id" not in part:
+                part["part_id"] = str(uuid.uuid4())
             message = {
                 "id": message_id,
                 "role": role,
@@ -115,7 +117,9 @@ class ChatOrchestrator:
                             tool_id = tool.id
                             print(f"calling {tool_name} with args {tool_args}")
 
+                            tool_part_id = str(uuid.uuid4())
                             await self.send_message_part(message_id, "assistant", {
+                                "part_id": tool_part_id,
                                 "type": "tools",
                                 "header": {"type": "web.search", "state": "running"},
                                 "input": {"query": tool_args}
@@ -150,10 +154,11 @@ class ChatOrchestrator:
                                 result = result.content
 
                             await self.send_message_part(message_id, "assistant", {
+                                "part_id": tool_part_id,
                                 "type": "tools",
                                 "header": {"type": "web.search", "state": "output-available"},
                                 "input": {"query": tool_args},
-                                "output": result
+                                "output": str(result)
                             })
 
                             self.messages.append(

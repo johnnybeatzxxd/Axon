@@ -42,21 +42,45 @@ function App() {
       setMessagesByConversation((prev) => {
         const activeMessages = prev[activeConversationId] || [];
         const existingMessageIndex = activeMessages.findIndex((m) => m.id === message.id);
+
         if (existingMessageIndex !== -1) {
+          // Message with this ID already exists, update it
           const updatedMessages = [...activeMessages];
           const existingMessage = updatedMessages[existingMessageIndex];
+          const newParts = message.parts;
+
+          let updatedParts = [...existingMessage.parts];
+
+          newParts.forEach(newPart => {
+            if (newPart.part_id) {
+              const existingPartIndex = updatedParts.findIndex(p => p.part_id === newPart.part_id);
+              if (existingPartIndex !== -1) {
+                // Part with this part_id exists, replace it
+                updatedParts[existingPartIndex] = newPart;
+              } else {
+                // Part with this part_id does not exist, add it
+                updatedParts.push(newPart);
+              }
+            } else {
+              // Part has no part_id, just add it
+              updatedParts.push(newPart);
+            }
+          });
+
           const updatedMessage = {
             ...existingMessage,
-            parts: [...existingMessage.parts, ...message.parts],
+            parts: updatedParts,
           };
           updatedMessages[existingMessageIndex] = updatedMessage;
           return { ...prev, [activeConversationId]: updatedMessages };
         } else {
+          // New message, add it
           return { ...prev, [activeConversationId]: [...activeMessages, message] };
         }
       });
     });
   }, [activeConversationId]);
+
 
   function truncateTitleFromMessage(message) {
     const max = 24
