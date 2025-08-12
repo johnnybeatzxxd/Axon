@@ -27,9 +27,10 @@ export const MessageContent = ({
 }) => (
   <div
     className={cn(
-      'flex flex-col gap-2 rounded-lg text-sm text-foreground px-4 py-3 overflow-hidden',
-      'group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground',
-      'group-[.is-assistant]:bg-secondary group-[.is-assistant]:text-foreground',
+      'flex flex-col gap-4 rounded-lg text-sm text-foreground px-0 py-0 overflow-visible',
+      // No background by default; allow parent to style. Maintain readable text color.
+      'group-[.is-user]:bg-transparent group-[.is-user]:text-foreground',
+      'group-[.is-assistant]:bg-transparent group-[.is-assistant]:text-foreground',
       className
     )}
     {...props}>
