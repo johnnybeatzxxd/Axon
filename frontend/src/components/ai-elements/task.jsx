@@ -27,7 +27,7 @@ export const TaskItem = ({
   className,
   ...props
 }) => (
-  <div className={cn('text-sm text-muted-foreground', className)} {...props}>
+  <div className={cn('text-sm text-neutral-500', className)} {...props}>
     {children}
   </div>
 );
@@ -72,11 +72,11 @@ export const TaskContent = ({
 }) => (
   <CollapsibleContent
     className={cn(
-      'text-popover-foreground outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2',
+      'text-popover-foreground outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-1 data-[state=open]:slide-in-from-top-1',
       className
     )}
     {...props}>
-    <div className="border-l-2 border-muted pl-4 mt-4 space-y-2">
+    <div className="border-l-2 border-muted pl-3 mt-2 space-y-1">
       {children}
     </div>
   </CollapsibleContent>

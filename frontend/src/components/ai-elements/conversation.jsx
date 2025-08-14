@@ -10,7 +10,7 @@ export const Conversation = ({
   ...props
 }) => (
   <StickToBottom
-    className={cn('relative flex-1 overflow-y-auto', className)}
+    className={cn('relative flex-1 h-full overflow-y-auto no-scrollbar', className)}
     initial="smooth"
     resize="smooth"
     role="log"
@@ -21,7 +21,7 @@ export const ConversationContent = ({
   className,
   ...props
 }) => (
-  <StickToBottom.Content className={cn('p-4', className)} {...props} />
+  <StickToBottom.Content className={cn('p-4 no-scrollbar', className)} {...props} />
 );
 
 export const ConversationScrollButton = ({

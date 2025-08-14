@@ -235,9 +235,10 @@ const components = {
 
     return (
       <CodeBlock
-        className={cn('my-4 h-auto', className)}
+        className={cn('my-2 h-auto', className)}
         code={(children.props).children}
-        language={language}>
+        language={language}
+        variant="dark">
         <CodeBlockCopyButton
           onCopy={() => console.log('Copied code to clipboard')}
           onError={() => console.error('Failed to copy code to clipboard')} />
@@ -254,6 +255,7 @@ export const Response = memo(({
   allowedLinkPrefixes,
   defaultOrigin,
   parseIncompleteMarkdown: shouldParseIncompleteMarkdown = true,
+  preserveLineBreaks = true,
   ...props
 }) => {
   // Parse the children to remove incomplete markdown tokens if enabled
@@ -261,6 +263,42 @@ export const Response = memo(({
     typeof children === 'string' && shouldParseIncompleteMarkdown
       ? parseIncompleteMarkdown(children)
       : children;
+
+  // Convert single newlines to hard line breaks in markdown while preserving code blocks
+  const convertNewlinesToBreaks = (text) => {
+    if (!preserveLineBreaks || typeof text !== 'string') return text;
+
+    const segments = [];
+    const codeBlockRegex = /```[\s\S]*?```/g;
+    let lastIndex = 0;
+    let match;
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+      // Non-code segment before this code block
+      const nonCode = text.slice(lastIndex, match.index);
+      if (nonCode) {
+        segments.push({ type: 'text', value: nonCode });
+      }
+      // Code block segment
+      segments.push({ type: 'code', value: match[0] });
+      lastIndex = match.index + match[0].length;
+    }
+    const tail = text.slice(lastIndex);
+    if (tail) segments.push({ type: 'text', value: tail });
+
+    const transformText = (s) =>
+      s
+        .replace(/\r\n/g, '\n')
+        .split('\n\n')
+        .map((paragraph) => paragraph.replace(/\n/g, '  \n'))
+        .join('\n\n');
+
+    return segments
+      .map((seg) => (seg.type === 'text' ? transformText(seg.value) : seg.value))
+      .join('');
+  };
+
+  const finalChildren =
+    typeof parsedChildren === 'string' ? convertNewlinesToBreaks(parsedChildren) : parsedChildren;
 
   return (
     <div
@@ -274,7 +312,7 @@ export const Response = memo(({
         allowedLinkPrefixes={allowedLinkPrefixes ?? ['*']}
         defaultOrigin={defaultOrigin}
         {...options}>
-        {parsedChildren}
+        {finalChildren}
       </HardenedMarkdown>
     </div>
   );

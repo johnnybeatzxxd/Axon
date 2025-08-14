@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useRef, useEffect, useMemo, useState } from 'react'
+import { websocketService } from '../../services/websocketService';
 
 const ChatContext = createContext(null)
 
@@ -13,10 +14,119 @@ export function ChatProvider({ children }) {
   const [activeConversationId, setActiveConversationId] = useState(initialConversationId)
 
   const [messagesByConversation, setMessagesByConversation] = useState(() => ({
-    [initialConversationId]: [],
+    [initialConversationId]: [
+      //{id:"id",role:'user',content:[{text:"hailo world",}]},
+      //{id:"id",role:'assistant',content:[{reasoning:"hailo this is the reasoning of the responses hahahah "},{text:`this is amazing **read** \`\`\`print("yohans")\`\`\` text never give up wekanda forever this is amazing\nhellow world`},{tool:{arguments:`{"name":johnnyebeatz"}`}}]},
+      //{id:"id",role:'assistant',content:[{text:"the **tool** response is so bad what the hell is going on "},{tool:{arguments:`{"name":johnnyebeatz"}`}}]},
+      //{id:"id",role:'assistant',content:[{task:[`**read** \`\`\`jsx\`\`\``]},{tool:{arguments:`{"name":johnnyebeatz"}`}}]},
+      //{id:"id",role:'user',content:[{text:"hailo "}]},
+    ],
   }))
 
   const [folders, setFolders] = useState([])
+  const streamingMessageIdRef = useRef(null);
+
+
+  useEffect(() => {
+
+    console.log("new message - reconnecting")
+    websocketService.connect();
+    const socket = websocketService.getSocket();
+
+    const handleSocketMessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      setMessagesByConversation(prev => {
+        const activeMessages = prev[activeConversationId] || [];
+        const streamingMessageIndex = activeMessages.findIndex(m => m.id === data.messageId);
+
+        if (streamingMessageIndex === -1 && data.type !== 'start') return prev;
+
+        const newMessages = [...activeMessages];
+
+        switch (data.type) {
+          case 'start':
+            newMessages.push({
+              id: data.messageId,
+              role: 'assistant',
+              content: [],
+            });
+            break;
+
+          // UPGRADED: This case now handles both CREATING and REPLACING parts.
+          case 'content_part_start': {
+            const updatedMessage = { ...newMessages[streamingMessageIndex] };
+            const newContent = [...updatedMessage.content];
+            const partIndex = data.partIndex;
+            const newPart = data.part;
+
+            // Check if a part already exists at this index.
+            if (newContent[partIndex]) {
+              // --- UPDATE/REPLACE LOGIC ---
+              // It exists, so we replace it. This is perfect for tool status updates.
+              newContent[partIndex] = newPart;
+            } else {
+              // --- CREATE LOGIC ---
+              // It doesn't exist, so we add it.
+              // This should only happen if partIndex is the next available spot.
+              newContent.push(newPart);
+            }
+            
+            updatedMessage.content = newContent;
+            newMessages[streamingMessageIndex] = updatedMessage;
+            break;
+          }
+          
+          // UPGRADED: This case now appends to 'text' OR 'reasoning'
+          case 'text_chunk': {
+            const updatedMessage = { ...newMessages[streamingMessageIndex] };
+            const partIndex = data.partIndex;
+            const targetPart = updatedMessage.content[partIndex];
+
+            if (targetPart) {
+                const newContent = [...updatedMessage.content];
+                let updatedPart = { ...newContent[partIndex] }; // a mutable copy of the part
+
+                // Check if it's a text block
+                if (updatedPart.text !== undefined) {
+                    updatedPart.text += data.text;
+                } 
+                // Check if it's a reasoning block
+                else if (updatedPart.reasoning !== undefined) {
+                    updatedPart.reasoning += data.text;
+                }
+
+                newContent[partIndex] = updatedPart;
+                updatedMessage.content = newContent;
+                newMessages[streamingMessageIndex] = updatedMessage;
+            }
+            break;
+          }
+
+          case 'end':
+            break;
+
+          default:
+            console.warn('Received unknown message type:', data.type);
+        }
+        
+        return {
+          ...prev,
+          [activeConversationId]: newMessages,
+        };
+      });
+    };
+
+    if (socket) {
+      socket.addEventListener('message', handleSocketMessage);
+    }
+
+    return () => {
+      if (socket) {
+        socket.removeEventListener('message', handleSocketMessage);
+      }
+    };
+  }, [activeConversationId]);
 
   const truncateTitleFromMessage = useCallback((message) => {
     const max = 24
@@ -33,14 +143,18 @@ export function ChatProvider({ children }) {
   )
 
   const sendMessage = useCallback((text) => {
-    const id = crypto.randomUUID()
+    const userMessageId = crypto.randomUUID()
+    const payload =  { chatId:activeConversationId, messageId: userMessageId, role: 'user', content: [{ text }] }
+    // add message to the conversation list
     setMessagesByConversation((prev) => ({
       ...prev,
       [activeConversationId]: [
         ...(prev[activeConversationId] || []),
-        { id, role: 'user', text },
+        payload
       ],
     }))
+
+    websocketService.send(JSON.stringify(payload));
 
     setConversations((prev) => prev.map((c) => {
       if (c.id !== activeConversationId) return c

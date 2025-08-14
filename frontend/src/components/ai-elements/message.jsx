@@ -12,7 +12,7 @@ export const Message = ({
 }) => (
   <div
     className={cn(
-      'group flex w-full items-end justify-end gap-2 py-4',
+      'group flex w-full items-end justify-end gap-1 py-1',
       from === 'user' ? 'is-user' : 'is-assistant flex-row-reverse justify-end',
       '[&>div]:max-w-[80%]',
       className
@@ -28,7 +28,9 @@ export const MessageContent = ({
   <div
     className={cn(
       'flex flex-col gap-2 rounded-lg text-sm text-foreground px-4 py-3 overflow-hidden',
-      'group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground',
+      // User: dark grey background
+      'group-[.is-user]:bg-neutral-900 group-[.is-user]:text-neutral-100 border-white',
+      // Assistant: keep secondary
       'group-[.is-assistant]:bg-secondary group-[.is-assistant]:text-foreground',
       className
     )}

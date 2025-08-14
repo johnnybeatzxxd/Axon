@@ -5,6 +5,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import {
   oneDark,
   oneLight,
+  vscDarkPlus,
+  dark 
+
 } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -18,6 +21,7 @@ export const CodeBlock = ({
   language,
   showLineNumbers = false,
   className,
+  variant = 'dark', // 'default' | 'dark'
   children,
   ...props
 }) => (
@@ -31,17 +35,17 @@ export const CodeBlock = ({
       <div className="relative">
         <SyntaxHighlighter
           language={language}
-          style={oneLight}
+          //style={dark}
           customStyle={{
             margin: 0,
             padding: '1rem',
             fontSize: '0.875rem',
-            background: 'hsl(var(--background))',
-            color: 'hsl(var(--foreground))',
+            background: variant === 'dark' ? '#111827' : 'hsl(var(--background))',
+            color: variant === 'dark' ? '#e5e7eb' : 'hsl(var(--foreground))',
           }}
           showLineNumbers={showLineNumbers}
           lineNumberStyle={{
-            color: 'hsl(var(--muted-foreground))',
+            color: variant === 'dark' ? '#9ca3af' : 'hsl(var(--muted-foreground))',
             paddingRight: '1rem',
             minWidth: '2.5rem',
           }}
@@ -58,12 +62,12 @@ export const CodeBlock = ({
             margin: 0,
             padding: '1rem',
             fontSize: '0.875rem',
-            background: 'hsl(var(--background))',
-            color: 'hsl(var(--foreground))',
+            background: variant === 'dark' ? '#0f0f0f' : 'hsl(var(--background))',
+            color: variant === 'dark' ? '#e5e7eb' : 'hsl(var(--foreground))',
           }}
           showLineNumbers={showLineNumbers}
           lineNumberStyle={{
-            color: 'hsl(var(--muted-foreground))',
+            color: variant === 'dark' ? '#9ca3af' : 'hsl(var(--muted-foreground))',
             paddingRight: '1rem',
             minWidth: '2.5rem',
           }}

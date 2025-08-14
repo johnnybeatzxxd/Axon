@@ -21,7 +21,7 @@ export const Tool = ({
   ...props
 }) => (
   <Collapsible
-    className={cn('not-prose mb-4 w-full rounded-md border', className)}
+    className={cn('not-prose mb-1 w-full sm:w-3/4 md:w-2/3 lg:w-1/2 max-w-full rounded-md border bg-neutral-900', className)}
     {...props} />
 );
 
