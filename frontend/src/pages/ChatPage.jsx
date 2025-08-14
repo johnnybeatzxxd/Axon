@@ -58,9 +58,8 @@ function ChatPage({ messages, onSend, onExportConversation, onOpenNav }) {
   function handlePromptPreset(preset) {
     composerRef.current?.focusWithPreset?.(preset)
   }
-
   return (
-    <section className={isSendingWave ? 'chat-window chat-window--sending' : 'chat-window'} role="main">
+    <section className={isSendingWave ? 'chat-window chat-window--sending no-scrollbar' : 'chat-window no-scrollbar'} role="main">
       <div className="chat-gradient" aria-hidden />
 
       <ChatHeader
@@ -94,7 +93,15 @@ ChatPage.propTypes = {
     PropTypes.shape({
       id: PropTypes.string.isRequired,
       role: PropTypes.oneOf(['user', 'assistant']).isRequired,
-      text: PropTypes.string.isRequired,
+      content: PropTypes.arrayOf(
+        PropTypes.shape({
+          text: PropTypes.string,
+          image: PropTypes.string,
+          reasoning: PropTypes.string,
+          tool: PropTypes.object,
+          task: PropTypes.array,
+        })
+      ).isRequired,
     })
   ).isRequired,
   onSend: PropTypes.func.isRequired,

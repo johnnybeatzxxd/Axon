@@ -384,6 +384,10 @@ body {
     z-index: 3; /* ensure messages are above header visuals */
   }
   .message-list::-webkit-scrollbar { width: 0; height: 0 } /* Chrome/Safari */
+
+  /* Utility to hide scrollbars while preserving scroll behavior */
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; overscroll-behavior: contain }
+  .no-scrollbar::-webkit-scrollbar { display: none }
   
   .message {
     display: flex;
