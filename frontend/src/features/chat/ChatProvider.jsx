@@ -10,7 +10,6 @@ export function ChatProvider({ children }) {
   const [conversations, setConversations] = useState(() => [
     { id: initialConversationId, title: 'New chat', lastMessage: '', updatedAt: Date.now() },
   ])
-
   const [activeConversationId, setActiveConversationId] = useState(initialConversationId)
 
   const [messagesByConversation, setMessagesByConversation] = useState(() => ({
@@ -25,7 +24,10 @@ export function ChatProvider({ children }) {
 
   const [folders, setFolders] = useState([])
   const streamingMessageIdRef = useRef(null);
-
+  const [loadingState, setLoadingState] = useState({
+    isActive: false,
+    message: ''
+  })
 
   useEffect(() => {
 
@@ -43,7 +45,12 @@ export function ChatProvider({ children }) {
         if (streamingMessageIndex === -1 && data.type !== 'start') return prev;
 
         const newMessages = [...activeMessages];
-
+        if (data.status) {
+            setLoadingState(prev => ({ ...prev, message: data.status }));
+          }
+        if (data.type === 'end') {
+            setLoadingState({ isActive: false, message: '' });
+          }
         switch (data.type) {
           case 'start':
             newMessages.push({
@@ -156,6 +163,7 @@ export function ChatProvider({ children }) {
 
     websocketService.send(JSON.stringify(payload));
 
+    setLoadingState({ isActive: true, message: 'Sending...' });
     setConversations((prev) => prev.map((c) => {
       if (c.id !== activeConversationId) return c
       const nextTitle = (!c.title || c.title === 'New chat')
@@ -347,6 +355,7 @@ export function ChatProvider({ children }) {
     messagesByConversation,
     messages,
     folders,
+    loadingState,
     // actions
     setActiveConversationId,
     sendMessage,
@@ -363,6 +372,7 @@ export function ChatProvider({ children }) {
     activeConversationId,
     messagesByConversation,
     messages,
+    loadingState,
     folders,
     sendMessage,
     createConversation,

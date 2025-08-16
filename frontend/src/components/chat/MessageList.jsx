@@ -33,9 +33,10 @@ import {
   WebPreviewBody,
   WebPreviewNavigationButton, 
 } from '@/components/ai-elements/web-preview';
+import {Loader} from '@/components/ai-elements/loader';
 import { ArrowLeftIcon, ArrowRightIcon, RotateCwIcon } from 'lucide-react';
 
-function MessageList({ messages }) {
+function MessageList({ messages, loadingState}) {
   const renderContentPart = (part, message, index) => {
     // Text content -> markdown-capable Response
     if (typeof part?.text === 'string') {
@@ -153,7 +154,6 @@ function MessageList({ messages }) {
 
     return null
   }
-
   return (
     // messages list schema [
     //  {id,role:'user',content:[
@@ -173,7 +173,7 @@ function MessageList({ messages }) {
                 return (
                   <Message
                     from={m.role}
-                    key={`${m.id}-${index}`}
+                    key={`${m.messageId}-${index}`}
                     className={isTool ? 'w-full [&>div]:max-w-full' : undefined}
                   >
                     <MessageContent className={isTool ? 'w-full' : undefined}>
@@ -184,12 +184,20 @@ function MessageList({ messages }) {
               })
             : null
         ))}
+        {loadingState.isActive && <LoadingIndicator message={loadingState.message} />}
       </ConversationContent>
       <ConversationScrollButton />
     </Conversation>
   )
 }
 
+const LoadingIndicator = (message) => {
+    return(
+      <div className='flex gap-2'>
+        <Loader/>
+        <div className='text-sm text-gray-200 animate-pulse'>{message.message}</div>
+      </div>)
+  }
 MessageList.propTypes = {
   messages: PropTypes.arrayOf(
     PropTypes.shape({

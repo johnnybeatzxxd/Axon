@@ -114,15 +114,15 @@ export const WebPreviewUrl = ({
     onKeyDown?.(event);
   };
 
-  return (
-    <Input
-      className="flex-1 h-8 text-sm"
-      placeholder="Enter URL..."
-      value={value ?? url}
-      onChange={onChange}
-      onKeyDown={handleKeyDown}
-      {...props} />
-  );
+  //return (
+  //  <Input
+  //    className="flex-1 h-8 text-sm"
+  //    placeholder="Enter URL..."
+  //    value={value ?? url}
+  //    onChange={onChange}
+  //    onKeyDown={handleKeyDown}
+  //    {...props} />
+  //);
 };
 
 export const WebPreviewBody = ({

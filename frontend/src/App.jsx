@@ -5,7 +5,7 @@ import { routes } from './router/routes'
 import { ChatProvider, useChat } from './features/chat/ChatProvider'
 
 // Module-level chat route element to keep component identity stable across renders
-function ChatRouteElement({ openNav, onFirstMessage, messages, sendMessage }) {
+function ChatRouteElement({ openNav, onFirstMessage, messages, sendMessage, loadingState}) {
   const { id } = useParams()
   const {
     conversations,
@@ -31,6 +31,7 @@ function ChatRouteElement({ openNav, onFirstMessage, messages, sendMessage }) {
         if (wasEmpty) onFirstMessage()
       }}
       onOpenNav={openNav}
+      loadingState={loadingState}
     />
   )
 }
@@ -56,6 +57,7 @@ function AppShell() {
     setActiveConversationId,
     messagesByConversation,
     messages,
+    loadingState,
     folders,
     createConversation,
     createFolder,
@@ -130,6 +132,7 @@ function AppShell() {
                     onFirstMessage={() => navigate(`/chat/${activeConversationId}`)} 
                     messages={messages}
                     sendMessage={sendMessage}
+                    loadingState={loadingState}
                   />
                 ) : (
                   <Component />

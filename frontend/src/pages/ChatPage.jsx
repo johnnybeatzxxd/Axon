@@ -13,7 +13,7 @@ const QUICK_PROMPTS = [
   'Explain WebSockets to a beginner',
 ]
 
-function ChatPage({ messages, onSend, onExportConversation, onOpenNav }) {
+function ChatPage({ messages, onSend, onExportConversation, onOpenNav, loadingState }) {
   const composerRef = useRef(null)
   const [showEmptyHero, setShowEmptyHero] = useState(!messages || messages.length === 0)
   const [isExitingHero, setIsExitingHero] = useState(false)
@@ -70,7 +70,7 @@ function ChatPage({ messages, onSend, onExportConversation, onOpenNav }) {
         onExportConversation={() => onExportConversation?.(selectedModel)}
       />
 
-      <MessageList messages={messages} />
+      <MessageList messages={messages} loadingState={loadingState} />
 
       {showEmptyHero && isEmpty && (
         <EmptyHero isExiting={isExitingHero} />
