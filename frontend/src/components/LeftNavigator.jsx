@@ -5,6 +5,7 @@ import React, { memo, useMemo, useState, useRef, useEffect, useCallback } from '
  import AxonIcon from '../assets/Axon-icon.png'
  import ContextMenu from './ContextMenu'
  import { ConfirmDialog } from './Modal'
+
 function IconButton({ label, onClick, children, noExpand = false }) {
   return (
     <button

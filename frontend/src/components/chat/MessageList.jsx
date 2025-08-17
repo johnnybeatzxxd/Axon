@@ -2,6 +2,8 @@ import PropTypes from 'prop-types'
 import React, { memo } from 'react'
 import { Message, MessageContent } from '@/components/ai-elements/message'
 import { Response } from '@/components/ai-elements/response'
+import { useIframeListener } from '@/hooks/useIframeListener';
+import { InteractiveWebMessage } from '@/components/ai-elements/interactive-response'
 import {
   Reasoning,
   ReasoningContent,
@@ -34,7 +36,6 @@ import {
   WebPreviewNavigationButton, 
 } from '@/components/ai-elements/web-preview';
 import {Loader} from '@/components/ai-elements/loader';
-import { ArrowLeftIcon, ArrowRightIcon, RotateCwIcon } from 'lucide-react';
 
 function MessageList({ messages, loadingState}) {
   const renderContentPart = (part, message, index) => {
@@ -68,40 +69,11 @@ function MessageList({ messages, loadingState}) {
       )
     }
    if (part?.app && typeof part.app === 'object') {
-        const app = part.app || {};
-        const appUrl = app.url || app.src || 'about:blank'; 
-        const sourceCode = app.sourceCode; 
-        const height = app.height || '400px'; 
-        const width = app.width || '1800px'; 
-        
       return (
-        <WebPreview key={`${message.id}-app-${index}`} defaultUrl={appUrl} style={{ height, width }} className="w-full">
-          {/* --- 2. UPDATE THE NAVIGATION SECTION --- */}
-          <WebPreviewNavigation className='border-4 border-white'>
-            <WebPreviewNavigationButton
-              tooltip="Back"
-              onClick={() => alert('Back button clicked!')}
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-            </WebPreviewNavigationButton>
-            <WebPreviewNavigationButton
-              tooltip="Forward"
-              onClick={() => alert('Forward button clicked!')}
-            >
-              <ArrowRightIcon className="h-4 w-4" />
-            </WebPreviewNavigationButton>
-            <WebPreviewNavigationButton
-              tooltip="Refresh"
-              onClick={() => alert('Refresh button clicked!')}
-            >
-              <RotateCwIcon className="h-4 w-4" />
-            </WebPreviewNavigationButton>
-
-            <WebPreviewUrl src={appUrl} />
-            
-          </WebPreviewNavigation>
-          <WebPreviewBody src={appUrl} srcDoc={sourceCode} />
-        </WebPreview>
+        <InteractiveWebMessage
+          key={`${message.id}-app-${index}`}
+          appPart={part.app}
+        />
       );
     }
     // Tool call content -> Tool with header, input and output
@@ -173,7 +145,7 @@ function MessageList({ messages, loadingState}) {
                 return (
                   <Message
                     from={m.role}
-                    key={`${m.messageId}-${index}`}
+                    key={`${m.id}-${index}`}
                     className={isTool ? 'w-full [&>div]:max-w-full' : undefined}
                   >
                     <MessageContent className={isTool ? 'w-full' : undefined}>
@@ -191,11 +163,11 @@ function MessageList({ messages, loadingState}) {
   )
 }
 
-const LoadingIndicator = (message) => {
+const LoadingIndicator = ({ message }) => {
     return(
       <div className='flex gap-2'>
         <Loader/>
-        <div className='text-sm text-gray-200 animate-pulse'>{message.message}</div>
+        <div className='text-sm text-gray-200 animate-pulse'>{message}</div>
       </div>)
   }
 MessageList.propTypes = {

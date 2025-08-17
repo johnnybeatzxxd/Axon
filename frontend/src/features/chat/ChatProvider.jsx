@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useEffect, useMemo, useState } from 'react'
 import { websocketService } from '../../services/websocketService';
-
 const ChatContext = createContext(null)
 
 export function ChatProvider({ children }) {
@@ -15,7 +14,7 @@ export function ChatProvider({ children }) {
   const [messagesByConversation, setMessagesByConversation] = useState(() => ({
     [initialConversationId]: [
       //{id:"id",role:'user',content:[{text:"hailo world",}]},
-      //{id:"id",role:'assistant',content:[{reasoning:"hailo this is the reasoning of the responses hahahah "},{text:`this is amazing **read** \`\`\`print("yohans")\`\`\` text never give up wekanda forever this is amazing\nhellow world`},{tool:{arguments:`{"name":johnnyebeatz"}`}}]},
+      //{id:"id",role:assistant',content:[{reasoning:"hailo this is the reasoning of the responses hahahah "},{text:`this is amazing **read** \`\`\`print("yohans")\`\`\` text never give up wekanda forever this is amazing\nhellow world`},{tool:{arguments:`{"name":johnnyebeatz"}`}}]},
       //{id:"id",role:'assistant',content:[{text:"the **tool** response is so bad what the hell is going on "},{tool:{arguments:`{"name":johnnyebeatz"}`}}]},
       //{id:"id",role:'assistant',content:[{task:[`**read** \`\`\`jsx\`\`\``]},{tool:{arguments:`{"name":johnnyebeatz"}`}}]},
       //{id:"id",role:'user',content:[{text:"hailo "}]},
@@ -28,13 +27,11 @@ export function ChatProvider({ children }) {
     isActive: false,
     message: ''
   })
-
   useEffect(() => {
 
     console.log("new message - reconnecting")
     websocketService.connect();
     const socket = websocketService.getSocket();
-
     const handleSocketMessage = (event) => {
       const data = JSON.parse(event.data);
 
@@ -152,16 +149,27 @@ export function ChatProvider({ children }) {
   const sendMessage = useCallback((text) => {
     const userMessageId = crypto.randomUUID()
     const payload =  { chatId:activeConversationId, messageId: userMessageId, role: 'user', content: [{ text }] }
+    const userMessage = {
+      id: userMessageId, // Use `id` here.
+      role: 'user',
+      content: [{ text }]
+    };
+    const payloadForBackend = {
+      chatId: activeConversationId,
+      messageId: userMessageId, // The backend expects `messageId`, which is fine.
+      role: 'user',
+      content: [{ text }]
+    };
     // add message to the conversation list
     setMessagesByConversation((prev) => ({
       ...prev,
       [activeConversationId]: [
         ...(prev[activeConversationId] || []),
-        payload
+        userMessage
       ],
     }))
 
-    websocketService.send(JSON.stringify(payload));
+    websocketService.send(JSON.stringify(payloadForBackend));
 
     setLoadingState({ isActive: true, message: 'Sending...' });
     setConversations((prev) => prev.map((c) => {
