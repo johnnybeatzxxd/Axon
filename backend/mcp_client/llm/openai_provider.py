@@ -21,25 +21,25 @@ class OpenAIProvider(LLMProvider):
         temperature: float = 1,
     ):
         conversations = [{"role": "system", "content": system}] + list(messages)
-        for attempt in range(3):
-            try:
-                stream = await self.client.chat.completions.create(
-                    model=model,
-                    temperature=temperature,
-                    messages=conversations,
-                    tools=tools,
-                    tool_choice="auto",
-                    max_tokens=850,
-                    stream=True,
-                )
-                async for chunk in stream:
-                    yield chunk
-            except APIConnectionError as e:
-                # Surface exception details to caller for logging
-                print('llm api failed:',e)
-                last_error = e
-                if attempt == 2:
-                    raise
-                await asyncio.sleep(3)
+        try:
+            stream = await self.client.chat.completions.create(
+                model=model,
+                temperature=temperature,
+                messages=conversations,
+                tools=tools,
+                tool_choice="auto",
+                stream=True,
+            )
+            async for chunk in stream:
+                print(chunk.choices[0].delta.content)
+                yield chunk
+
+        except APIConnectionError as e:
+            # Surface exception details to caller for logging
+            print('llm api failed:',e)
+            last_error = e
+            await asyncio.sleep(3)
 
 
+if "__main__" == __name__:
+    OpenAIProvider()

@@ -99,9 +99,13 @@ class ChatOrchestrator:
                 print('sending log')
                 log_message["status"] = f"Found {len(relevant_tools)} Relevant Tools."
                 await websocket.send_json(log_message)
+
+
             response_index = -1
             while not is_response_ready:
+                print("CALLING LLM")
                 if not streaming:
+                    assistant_message_id = str(uuid.uuid4())
                     await websocket.send_json({
                             "type": "start",
                             "messageId": assistant_message_id,
@@ -109,13 +113,15 @@ class ChatOrchestrator:
                 log_message["status"] = "Generating Response ..."
                 asyncio.create_task(self.send_delayed_message(log_message,2))
                 print(self.messages)
+
+
                 try:
                     stream = self.llm.generate(
                             system=self.instruction,
                             messages=self.messages,
                             tools=available_tools,
                             model="gemini-2.5-flash",
-                            temperature=0,
+                            temperature=1,
                             )
 
                     llm_full_response = []
@@ -127,8 +133,11 @@ class ChatOrchestrator:
                       "part": { "text": "" } 
                     }
 
+                    is_response_ready = True
+                    final_tool_calls = {}
                     async for chunk in stream:
                         print(chunk.choices[0].delta)
+                        print('*'*80)
                         if chunk and chunk.choices[0].delta.content:
                             content = chunk.choices[0].delta.content
 
@@ -140,7 +149,7 @@ class ChatOrchestrator:
                                 content_part_start_message["partIndex"] = response_index
                                 await websocket.send_json(content_part_start_message)
                                 
-                            else:
+                            elif current_stream == "text":
                                 llm_full_response[-1]["text"] += content
 
                             chunk_message = {
@@ -151,24 +160,35 @@ class ChatOrchestrator:
                                 "status": "Generating resonse ..."
                                 }
                             await websocket.send_json(chunk_message)
-
+                        # handling tools stream
                         elif chunk and chunk.choices[0].delta.tool_calls:
-                            current_stream = 'tool'
-                            for tool in chunk.choices[0].delta.tool_calls:
-                                response_index += 1
-                                tool_name = tool.function.name
-                                tool_args = tool.function.arguments
-                                tool_id = tool.id
-                                tool_state = "input-streaming"
-                                tool_output = ""
-                                tool_obj = {"id":tool_id,"name":tool_name,"input":tool_args,"output":tool_output,"state":tool_state}
-                                content_part_start_message["part"] = { "tool": tool_obj }
-                                content_part_start_message["partIndex"] = response_index
-                                await websocket.send_json(content_part_start_message)
-                                llm_full_response.append({"tool":tool_obj})
-                        
-                        print("-"*80)
-                    print(len(llm_full_response))
+                            for tool in chunk.choices[0].delta.tool_calls or []:
+                                index = tool.index
+                                if index is None:
+                                    index = uuid.uuid1()
+                                    final_tool_calls[index] = tool
+                                    break
+                                if index not in final_tool_calls:
+                                    final_tool_calls[index] = tool
+
+                                final_tool_calls[index].function.arguments += tool.function.arguments
+                            
+                    for tool_index in final_tool_calls.keys():
+                        current_stream = 'tool'
+                        tool = final_tool_calls[tool_index]
+                        response_index += 1
+                        tool_name = tool.function.name
+                        tool_args = tool.function.arguments
+                        tool_id = tool.id
+                        tool_state = "input-streaming"
+                        tool_output = ""
+                        tool_obj = {"id":tool_id,"name":tool_name,"input":tool_args,"output":tool_output,"state":tool_state}
+                        content_part_start_message["part"] = { "tool": tool_obj }
+                        content_part_start_message["partIndex"] = response_index
+                        await websocket.send_json(content_part_start_message)
+                        llm_full_response.append({"tool":tool_obj})
+                    
+                        # print("-"*80)
                 except Exception as e:
                     print(f"LLM generate error: {e}")
                     if self.websocket:
@@ -181,6 +201,7 @@ class ChatOrchestrator:
                         self.messages.append({"role": "assistant", "content": content["text"]})
 
                     elif "tool" in list(content.keys()):
+                        is_response_ready = False
                         print("LLM called tools")
                         tool = content["tool"]
                         tool_name = tool.get("name")
@@ -246,16 +267,23 @@ class ChatOrchestrator:
                                 "content": str(result),
                             }
                         )
+                        if self.websocket:
+                            tool["state"] = "output-available"
+                            tool["output"] = str(result)
+                            content_part_start_message["part"] = { "tool": tool}
+                            content_part_start_message["partIndex"] = response_index
+                            await self.websocket.send_json(content_part_start_message)                       
+
                 if restart_while_loop:
                     continue
                 streaming = False
+                response_index = -1
                 current_stream = ''
 
-            is_response_ready = True
-            await self.websocket.send_json({
-                "type": "end",
-                "messageId": assistant_message_id
-            })
+                await self.websocket.send_json({
+                    "type": "end",
+                    "messageId": assistant_message_id
+                })
         
 
             return "\n".join(final_text)
