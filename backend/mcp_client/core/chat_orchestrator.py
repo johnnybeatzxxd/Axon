@@ -122,6 +122,7 @@ class ChatOrchestrator:
                             tools=available_tools,
                             model="gemini-2.5-flash",
                             temperature=1,
+                            
                             )
 
                     llm_full_response = []
@@ -240,7 +241,7 @@ class ChatOrchestrator:
                             except Exception:
                                 parsed_args = {}
                             result = await session.call_tool(tool_name, parsed_args)
-                            result = result.content
+                            result = result.content[0].text
 
                         print("tool result:",result)
 
@@ -250,7 +251,7 @@ class ChatOrchestrator:
                                 "tool_calls": [
                                     {
                                         "function": {
-                                            "arguments": str(parsed_args),
+                                            "arguments": json.dumps(parsed_args),
                                             "name": tool_name,
                                         },
                                         "id": tool_id,

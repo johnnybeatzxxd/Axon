@@ -28,7 +28,18 @@ class OpenAIProvider(LLMProvider):
                 messages=conversations,
                 tools=tools,
                 tool_choice="auto",
+                reasoning_effort="low",
                 stream=True,
+                extra_body={
+                  'extra_body': {
+                    "google": {
+                      "thinking_config": {
+                        "thinking_budget": 2000,
+                        "include_thoughts": True
+                      }
+                    }
+                  }
+                }
             )
             async for chunk in stream:
                 print(chunk.choices[0].delta.content)
