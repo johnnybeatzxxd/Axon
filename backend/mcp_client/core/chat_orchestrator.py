@@ -4,37 +4,60 @@ import os
 from typing import Any, Dict, List, Optional
 import uuid
 from click import prompt
+import traceback
 from openai import chat
+from pydantic_ai import Agent, Tool, RunContext
+from pydantic_ai.toolsets import FunctionToolset
+from pydantic_ai.models.google import GoogleModelSettings
 
-from .tooling import format_mcp_tools_for_db, build_available_tools
+from .tooling import (
+    format_mcp_tools_for_db,
+    build_available_tools,
+    pydantic_tool_from_function_schema,
+)
 from ..rag.set_vector_db import save_tools_to_vector_db
-from ..rag.retrieve_tools import get_relevant_tools_for_chat
+from ..rag.retrieve_tools import get_relevant_tools_for_chat, retrieve_semantic_tools
 from ..tools import registry as tool_registry
-from ..llm.openai_provider import OpenAIProvider
-
-from fastapi import WebSocket
+from ..llm.base import LLMProvider
+from .stream import event_stream_handler, assistant_message_id
+from fastapi import WebSocket, websockets
 
 
 class ChatOrchestrator:
-    def __init__(self, instruction: Optional[str] = None, websocket: Optional[WebSocket] = None, manager: Any = None):
-        self.instruction: str = (
-            instruction
-            or (
-                "you are helpful assistant! your job is to help user with everything using the tools you have provided. "
-                "if the tools you provided doesnt allow you to accomplish the task or you need to search for more tools immediately "
-                "call retrieve_tools function with tags it will give you the right tools to accomplish the task!"
-                "you can also help user with your general knownledge you dont have to always use tools"
-            )
+    def __init__(
+        self,
+        instruction: Optional[str] = None,
+        websocket: Optional[WebSocket] = None,
+        manager: Any = None,
+    ):
+        self.instruction: str = instruction or (
+            "you are helpful assistant! your job is to help user with everything using the tools you have provided. "
+            "if the tools you provided doesnt allow you to accomplish the task or you need to search for more tools immediately "
+            "call retrieve_tools function with tags it will give you the right tools to accomplish the task!"
+            "you can also help user with your general knownledge you dont have to always use tools"
         )
         self.websocket = websocket
         self.manager = manager
         self.messages: List[Dict[str, Any]] = []
-        self.llm = OpenAIProvider(
-            api_key=os.getenv("GOOGLE_API_KEY"),
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+
+        self.llm_provider = LLMProvider()
+        self.model = self.llm_provider.get_model("GOOGLE", "gemini-2.5-flash")
+        if not self.model:
+            raise "MODEL NOT FOUND!"
+        self.model_settings = GoogleModelSettings(
+            google_thinking_config={"include_thoughts": True}
         )
 
+        self.agent = Agent(
+            model=self.model,
+            instructions=self.instruction,
+            model_settings=self.model_settings,
+        )
+        self.response_index = -1
+
+        self.assistant_message_id = str(uuid.uuid4())
         self.custom_tools: List[Dict[str, Any]] = [
+
             {
                 "type": "function",
                 "function": {
@@ -57,242 +80,102 @@ class ChatOrchestrator:
                 },
             }
         ]
-    async def send_delayed_message(self,message,delay):
+
+    async def send_delayed_message(self, message, delay):
         await asyncio.sleep(delay)
         await self.websocket.send_json(message)
-        
-    async def process_query(self, message: str, session,send_request=None) -> str:
+
+
+    async def process_query(self, message: str, session, send_request=None) -> str:
         websocket = self.websocket
         chat_id = message.get("chatId")
         query = message.get("content")[0]["text"]
-        assistant_message_id = str(uuid.uuid4())
         log_message = {
-            "messageId":assistant_message_id,
-            "chatId":chat_id,
-            "type":'log',
-            "payload":{},
-            "status":""
-        } 
-        self.messages.append({"role": "user", "content": query})
-        streaming = True
-        current_stream = ""
-        await websocket.send_json({
+            "messageId": self.assistant_message_id,
+            "chatId": chat_id,
+            "type": "log",
+            "payload": {},
+            "status": "",
+        }
+        await websocket.send_json(
+            {
                 "type": "start",
-                "messageId": assistant_message_id,
-            })
+                "messageId": self.assistant_message_id,
+            }
+        )
         try:
             try:
                 mcp_tools_list = await session.list_tools()
             except Exception as e:
                 print(f"list_tools error: {e}")
                 mcp_tools_list = []
+
+            print("QUERY:",query)
             embedding_ready_tools = format_mcp_tools_for_db(mcp_tools_list)
             save_tools_to_vector_db(embedding_ready_tools)
-            relevant_tools = get_relevant_tools_for_chat(self.messages, "tools", 0.754, top_k_fallback=3)
+            relevant_tools = retrieve_semantic_tools(
+                query, "tools", 0.754, top_k_fallback=3
+            )
 
             print(f"Relevant tool names: {relevant_tools}")
-            available_tools = build_available_tools(mcp_tools_list, relevant_tools, self.custom_tools)
-            final_text: List[str] = []
-            is_response_ready = False
+            available_tools = build_available_tools(
+                mcp_tools_list, relevant_tools, self.custom_tools
+            )
 
+            tools = [
+                pydantic_tool_from_function_schema(session, func["function"])
+                for func in available_tools
+                if func.get("type") == "function"
+            ]
+            mcp_toolset = FunctionToolset(tools=tools)
             if websocket:
-                print('sending log')
+                print("sending log")
                 log_message["status"] = f"Found {len(relevant_tools)} Relevant Tools."
                 await websocket.send_json(log_message)
 
-
-            response_index = -1
-            while not is_response_ready:
                 print("CALLING LLM")
-                if not streaming:
-                    assistant_message_id = str(uuid.uuid4())
-                    await websocket.send_json({
-                            "type": "start",
-                            "messageId": assistant_message_id,
-                        })
                 log_message["status"] = "Generating Response ..."
-                asyncio.create_task(self.send_delayed_message(log_message,2))
+                await asyncio.create_task(self.send_delayed_message(log_message, 2))
                 print(self.messages)
-
-
+                stream_state = {"assistant_message_id":None}
                 try:
-                    stream = self.llm.generate(
-                            system=self.instruction,
-                            messages=self.messages,
-                            tools=available_tools,
-                            model="gemini-2.5-flash",
-                            temperature=1,
-                            
+                    async with self.agent.run_stream(
+                        query,
+                        message_history=self.messages,
+                        event_stream_handler=lambda ctx, event_stream: event_stream_handler(
+                            ctx, event_stream, websocket, chat_id, stream_state
+                        ),
+                        toolsets=[mcp_toolset]) as stream:
+
+                            async for chunk in stream.stream_text(delta=True):
+                                chunk_message = {
+                                    "messageId":stream_state["assistant_message_id"],
+                                    "type": "text_chunk",
+                                    "partIndex": stream_state["part_index"],
+                                    "text": chunk,
+                                    "status": "Generating resonse ...",
+                                }
+                                await websocket.send_json(chunk_message)
+                                print(chunk,end='',flush=True)
+
+                            streaming = False
+                            await self.websocket.send_json(
+                                {"type": "end", "messageId": self.assistant_message_id}
                             )
 
-                    llm_full_response = []
-                    content_part_start_message = {
-                      "type": "content_part_start",
-                      "chatId": chat_id,
-                      "messageId": assistant_message_id,
-                      "partIndex": response_index,
-                      "part": { "text": "" } 
-                    }
-
-                    is_response_ready = True
-                    final_tool_calls = {}
-                    async for chunk in stream:
-                        print(chunk.choices[0].delta)
-                        print('*'*80)
-                        if chunk and chunk.choices[0].delta.content:
-                            content = chunk.choices[0].delta.content
-
-                            if current_stream != "text":
-                                response_index += 1
-                                current_stream = 'text'
-                                llm_full_response.append({"text":content})
-                                content_part_start_message["part"] = { "text": "" }
-                                content_part_start_message["partIndex"] = response_index
-                                await websocket.send_json(content_part_start_message)
-                                
-                            elif current_stream == "text":
-                                llm_full_response[-1]["text"] += content
-
-                            chunk_message = {
-                                "messageId": assistant_message_id,
-                                "type": "text_chunk",
-                                "partIndex": response_index,
-                                "text": content,
-                                "status": "Generating resonse ..."
-                                }
-                            await websocket.send_json(chunk_message)
-                        # handling tools stream
-                        elif chunk and chunk.choices[0].delta.tool_calls:
-                            for tool in chunk.choices[0].delta.tool_calls or []:
-                                index = tool.index
-                                if index is None:
-                                    index = uuid.uuid1()
-                                    final_tool_calls[index] = tool
-                                    break
-                                if index not in final_tool_calls:
-                                    final_tool_calls[index] = tool
-
-                                final_tool_calls[index].function.arguments += tool.function.arguments
-                            
-                    for tool_index in final_tool_calls.keys():
-                        current_stream = 'tool'
-                        tool = final_tool_calls[tool_index]
-                        response_index += 1
-                        tool_name = tool.function.name
-                        tool_args = tool.function.arguments
-                        tool_id = tool.id
-                        tool_state = "input-streaming"
-                        tool_output = ""
-                        tool_obj = {"id":tool_id,"name":tool_name,"input":tool_args,"output":tool_output,"state":tool_state}
-                        content_part_start_message["part"] = { "tool": tool_obj }
-                        content_part_start_message["partIndex"] = response_index
-                        await websocket.send_json(content_part_start_message)
-                        llm_full_response.append({"tool":tool_obj})
-                    
-                        # print("-"*80)
                 except Exception as e:
                     print(f"LLM generate error: {e}")
+                    traceback.print_exc()
                     if self.websocket:
                         await self.websocket.send_json({"log": f"LLM error: {e}"})
                     raise
-
-                restart_while_loop = False
-                for response_index, content in enumerate(llm_full_response):
-                    if "text" in list(content.keys()):
-                        self.messages.append({"role": "assistant", "content": content["text"]})
-
-                    elif "tool" in list(content.keys()):
-                        is_response_ready = False
-                        print("LLM called tools")
-                        tool = content["tool"]
-                        tool_name = tool.get("name")
-                        tool_args = tool.get("input")
-                        tool_id = tool.get("id")
-                        print(f"calling {tool_name} with args {tool_args}")
-                        if self.websocket:
-                            tool["state"] = "input-available"
-                            content_part_start_message["part"] = { "tool": tool}
-                            content_part_start_message["partIndex"] = response_index
-                            await self.websocket.send_json(content_part_start_message)
-
-                        if tool_registry.has(tool_name):
-                            parsed_args = {}
-                            try:
-                                parsed_args = json.loads(tool_args) if tool_args else {}
-                            except Exception:
-                                parsed_args = {}
-                            parsed_args["conversations"] = self.messages
-                            custom_result = tool_registry.call(tool_name, **parsed_args)
-
-                            if tool_name in ["retrieve_tools"]:
-                                if custom_result:
-                                    available_tools = build_available_tools(
-                                        mcp_tools_list, custom_result, self.custom_tools
-                                    )
-                                    restart_while_loop = True
-                                    break
-                                else:
-                                    result = "Tool Not Found!"
-                            result = custom_result
-
-                        else:
-                            try:
-                                parsed_args = json.loads(tool_args) if tool_args else {}
-                            except Exception:
-                                parsed_args = {}
-                            result = await session.call_tool(tool_name, parsed_args)
-                            result = result.content[0].text
-
-                        print("tool result:",result)
-
-                        self.messages.append(
-                            {
-                                "role": "assistant",
-                                "tool_calls": [
-                                    {
-                                        "function": {
-                                            "arguments": json.dumps(parsed_args),
-                                            "name": tool_name,
-                                        },
-                                        "id": tool_id,
-                                        "type": "function",
-                                    }
-                                ],
-                            }
-                        )
-                        self.messages.append(
-                            {
-                                "tool_call_id": tool_id,
-                                "role": "tool",
-                                "name": tool_name,
-                                "content": str(result),
-                            }
-                        )
-                        if self.websocket:
-                            tool["state"] = "output-available"
-                            tool["output"] = str(result)
-                            content_part_start_message["part"] = { "tool": tool}
-                            content_part_start_message["partIndex"] = response_index
-                            await self.websocket.send_json(content_part_start_message)                       
-
-                if restart_while_loop:
-                    continue
-                streaming = False
-                response_index = -1
-                current_stream = ''
-
-                await self.websocket.send_json({
-                    "type": "end",
-                    "messageId": assistant_message_id
-                })
-        
-
-            return "\n".join(final_text)
         except Exception as e:
+
+            traceback.print_exc()
             print(f"process_query error: {e}")
             return ""
 
-    async def chat_loop(self, session,message):
+    async def chat_loop(self, session, message):
         print("\nMCP Client Started!")
         print("Type your queries or 'quit' to exit.")
 
@@ -310,3 +193,6 @@ class ChatOrchestrator:
             return
 
 
+if __name__ == "__main__":
+    chat = ChatOrchestrator()
+    asyncio.run(chat.chat_loop())
