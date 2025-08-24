@@ -12,52 +12,51 @@ const QUICK_PROMPTS = [
   'Brainstorm 5 feature ideas for a habit app',
   'Explain WebSockets to a beginner',
 ]
-
+function usePrevious(value) {
+  const ref = useRef();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+}
 function ChatPage({ messages, onSend, onExportConversation, onOpenNav, loadingState }) {
   const composerRef = useRef(null)
-  const [showEmptyHero, setShowEmptyHero] = useState(!messages || messages.length === 0)
   const [isExitingHero, setIsExitingHero] = useState(false)
   const [isSendingWave, setIsSendingWave] = useState(false)
   const [selectedModel, setSelectedModel] = useState('gpt-4o-mini')
   const models = MODEL_OPTIONS
-
   const isEmpty = useMemo(() => !messages || messages.length === 0, [messages])
+  const wasEmpty = usePrevious(isEmpty);
 
   useEffect(() => {
-    if (isEmpty) {
-      setShowEmptyHero(true)
-      setIsExitingHero(false)
-    }
-  }, [isEmpty])
-
-  useEffect(() => {
-    const isEmptyNow = !messages || messages.length === 0
-    if (showEmptyHero && !isEmptyNow) {
-      setIsExitingHero(true)
+    if (wasEmpty && !isEmpty) {
+      setIsExitingHero(true);
       const t = window.setTimeout(() => {
-        setShowEmptyHero(false)
-        setIsExitingHero(false)
-      }, 800)
-      return () => window.clearTimeout(t)
+        setIsExitingHero(false);
+      }, 800);
+      return () => window.clearTimeout(t);
     }
-  }, [messages, showEmptyHero])
+  }, [isEmpty, wasEmpty])
 
   function handleSubmitMessage(text) {
-    if (!text || !text.trim()) return
-    if (showEmptyHero) {
-      setIsExitingHero(true)
-      setIsSendingWave(true)
-      window.setTimeout(() => {
-        setShowEmptyHero(false)
-        setIsSendingWave(false)
-      }, 800)
+      if (!text || !text.trim()) return
+      // FROM: if (showEmptyHero) {
+      // TO:
+      if (isEmpty) {
+        setIsExitingHero(true)
+        setIsSendingWave(true)
+        window.setTimeout(() => {
+          setIsSendingWave(false)
+        }, 800)
+      }
+      onSend?.(text)
     }
-    onSend?.(text)
-  }
 
   function handlePromptPreset(preset) {
     composerRef.current?.focusWithPreset?.(preset)
   }
+
+  const showHeroElements = isEmpty || isExitingHero;
   return (
     <section className={isSendingWave ? 'chat-window chat-window--sending no-scrollbar' : 'chat-window no-scrollbar'} role="main">
       <div className="chat-gradient" aria-hidden />
@@ -72,21 +71,20 @@ function ChatPage({ messages, onSend, onExportConversation, onOpenNav, loadingSt
 
       <MessageList messages={messages} loadingState={loadingState} />
 
-      {showEmptyHero && isEmpty && (
+      {showHeroElements && (
         <EmptyHero isExiting={isExitingHero} />
       )}
 
-      {/* Keep old composer for quick rollback and visual comparison (commented out) */}
       {true && (
         <form className="composer" onSubmit={(e) => { e.preventDefault(); }}>
-          {(showEmptyHero || isExitingHero) && isEmpty && (
+          {showHeroElements && (
             <PromptBar prompts={QUICK_PROMPTS} isExiting={isExitingHero} onPreset={handlePromptPreset} />
           )}
           <Composer ref={composerRef} onSubmit={handleSubmitMessage} />
         </form>
-      )}    </section>
-  )
-}
+      )}
+    </section>
+  )}
 
 ChatPage.propTypes = {
   messages: PropTypes.arrayOf(

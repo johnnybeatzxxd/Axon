@@ -1,4 +1,4 @@
-'use client';;
+'use client';
 import { CodeBlock, CodeBlockCopyButton } from './code-block';
 import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -216,6 +216,14 @@ const components = {
       {children}
     </h6>
   ),
+  p: ({ node, children, className, ...props }) => {
+    const content = (!children || (Array.isArray(children) && children.length === 0)) ? <br /> : children;
+    return (
+      <p className={cn('mb-2', className)} {...props}>
+        {content}
+      </p>
+    );
+  },
   pre: ({ node, className, children }) => {
     let language = 'javascript';
 
@@ -245,6 +253,7 @@ const components = {
       </CodeBlock>
     );
   },
+  softbreak: () => <br />,
 };
 
 export const Response = memo(({
@@ -255,7 +264,7 @@ export const Response = memo(({
   allowedLinkPrefixes,
   defaultOrigin,
   parseIncompleteMarkdown: shouldParseIncompleteMarkdown = true,
-  preserveLineBreaks = true,
+  // preserveLineBreaks = true, // Remove this prop as it's no longer needed
   ...props
 }) => {
   // Parse the children to remove incomplete markdown tokens if enabled
@@ -264,41 +273,9 @@ export const Response = memo(({
       ? parseIncompleteMarkdown(children)
       : children;
 
-  // Convert single newlines to hard line breaks in markdown while preserving code blocks
-  const convertNewlinesToBreaks = (text) => {
-    if (!preserveLineBreaks || typeof text !== 'string') return text;
+  // No need for convertNewlinesToBreaks - softbreak override handles it
 
-    const segments = [];
-    const codeBlockRegex = /```[\s\S]*?```/g;
-    let lastIndex = 0;
-    let match;
-    while ((match = codeBlockRegex.exec(text)) !== null) {
-      // Non-code segment before this code block
-      const nonCode = text.slice(lastIndex, match.index);
-      if (nonCode) {
-        segments.push({ type: 'text', value: nonCode });
-      }
-      // Code block segment
-      segments.push({ type: 'code', value: match[0] });
-      lastIndex = match.index + match[0].length;
-    }
-    const tail = text.slice(lastIndex);
-    if (tail) segments.push({ type: 'text', value: tail });
-
-    const transformText = (s) =>
-      s
-        .replace(/\r\n/g, '\n')
-        .split('\n\n')
-        .map((paragraph) => paragraph.replace(/\n/g, '  \n'))
-        .join('\n\n');
-
-    return segments
-      .map((seg) => (seg.type === 'text' ? transformText(seg.value) : seg.value))
-      .join('');
-  };
-
-  const finalChildren =
-    typeof parsedChildren === 'string' ? convertNewlinesToBreaks(parsedChildren) : parsedChildren;
+  const finalChildren = parsedChildren;
 
   return (
     <div

@@ -13,12 +13,6 @@ function ChatRouteElement({ openNav, onFirstMessage, messages, sendMessage, load
     setActiveConversationId,
   } = useChat()
 
-  useEffect(() => {
-    if (!id) return
-    if (conversations.some((c) => c.id === id) && id !== activeConversationId) {
-      setActiveConversationId(id)
-    }
-  }, [id, conversations, activeConversationId, setActiveConversationId])
 
   const ChatPage = routes.find((r) => r.isChat)?.component
   return (
@@ -69,7 +63,6 @@ function AppShell() {
     deleteFolder,
     sendMessage,
   } = useChat()
-
   const openNav = useCallback(() => setIsMobileNavOpen(true), [])
 
   // (removed shadowing inner ChatRouteElement)
@@ -128,6 +121,7 @@ function AppShell() {
               element={
                 isChat ? (
                   <ChatRouteElement 
+                    key={activeConversationId}
                     openNav={openNav} 
                     onFirstMessage={() => navigate(`/chat/${activeConversationId}`)} 
                     messages={messages}

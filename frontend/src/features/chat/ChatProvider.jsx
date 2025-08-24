@@ -20,7 +20,7 @@ export function ChatProvider({ children }) {
       //{id:"id",role:'user',content:[{text:"hailo "}]},
     ],
   }))
-
+  const [socket, setSocket] = useState(null);
   const [folders, setFolders] = useState([])
   const streamingMessageIdRef = useRef(null);
   const [loadingState, setLoadingState] = useState({
@@ -28,13 +28,28 @@ export function ChatProvider({ children }) {
     message: ''
   })
   useEffect(() => {
+    console.log("Attempting to connect WebSocket...");
+    websocketService.connect(); 
+    
+    const socketInstance = websocketService.getSocket();
+    setSocket(socketInstance);
 
-    console.log("new message - reconnecting")
-    websocketService.connect();
-    const socket = websocketService.getSocket();
+    return () => {
+      console.log("Disconnecting WebSocket...");
+      setSocket(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!socket) {
+      return;
+    }
+
+    console.log("Attaching message listener for conversation:", activeConversationId);
+    
     const handleSocketMessage = (event) => {
       const data = JSON.parse(event.data);
-
+      
       setMessagesByConversation(prev => {
         const activeMessages = prev[activeConversationId] || [];
         const streamingMessageIndex = activeMessages.findIndex(m => m.id === data.messageId);
@@ -56,23 +71,15 @@ export function ChatProvider({ children }) {
               content: [],
             });
             break;
-
-          // UPGRADED: This case now handles both CREATING and REPLACING parts.
           case 'content_part_start': {
             const updatedMessage = { ...newMessages[streamingMessageIndex] };
             const newContent = [...updatedMessage.content];
             const partIndex = data.partIndex;
             const newPart = data.part;
-
-            // Check if a part already exists at this index.
+            
             if (newContent[partIndex]) {
-              // --- UPDATE/REPLACE LOGIC ---
-              // It exists, so we replace it. This is perfect for tool status updates.
               newContent[partIndex] = newPart;
             } else {
-              // --- CREATE LOGIC ---
-              // It doesn't exist, so we add it.
-              // This should only happen if partIndex is the next available spot.
               newContent.push(newPart);
             }
             
@@ -80,25 +87,54 @@ export function ChatProvider({ children }) {
             newMessages[streamingMessageIndex] = updatedMessage;
             break;
           }
-          
-          // UPGRADED: This case now appends to 'text' OR 'reasoning'
+
           case 'text_chunk': {
             const updatedMessage = { ...newMessages[streamingMessageIndex] };
             const partIndex = data.partIndex;
-            const targetPart = updatedMessage.content[partIndex];
+            const targetIndex = data.partIndex === -1 ? updatedMessage.content.length - 1 : data.partIndex;
+            const targetPart = updatedMessage.content[targetIndex];
 
             if (targetPart) {
                 const newContent = [...updatedMessage.content];
                 let updatedPart = { ...newContent[partIndex] }; // a mutable copy of the part
 
-                // Check if it's a text block
                 if (updatedPart.text !== undefined) {
                     updatedPart.text += data.text;
                 } 
-                // Check if it's a reasoning block
                 else if (updatedPart.reasoning !== undefined) {
                     updatedPart.reasoning += data.text;
                 }
+                else if (updatedPart.tool !== undefined){
+                    let newToolObject = { ...updatedPart.tool };
+
+                    if (data.inputDelta) { 
+                        newToolObject.input = (newToolObject.input || '') + data.inputDelta;
+                    }
+                    if (data.output) {
+                        newToolObject.output = data.output;
+                    }
+                    if (data.toolStatus) {
+                        newToolObject.status = data.toolStatus;
+                    }
+
+                    if (data.toolState) { 
+                        newToolObject.state = data.toolState;
+                        
+                        if (data.toolState === "input-available") {
+                            try {
+                                // Attempt to parse the fully accumulated input string.
+                                if (typeof newToolObject.input !== 'object'){
+                                newToolObject.input = JSON.parse(newToolObject.input);
+                                }
+                            } catch (error) {
+                                console.error("Failed to parse tool input JSON:", error);
+                                console.error("Invalid JSON string was:", newToolObject.input);
+                            }
+                        }
+                    }
+
+                    updatedPart.tool = newToolObject;
+              }
 
                 newContent[partIndex] = updatedPart;
                 updatedMessage.content = newContent;
@@ -106,10 +142,12 @@ export function ChatProvider({ children }) {
             }
             break;
           }
-
+          case 'log':{
+              console.log(data)
+              break; 
+          }
           case 'end':
             break;
-
           default:
             console.warn('Received unknown message type:', data.type);
         }
@@ -121,16 +159,14 @@ export function ChatProvider({ children }) {
       });
     };
 
-    if (socket) {
-      socket.addEventListener('message', handleSocketMessage);
-    }
+    socket.addEventListener('message', handleSocketMessage);
 
     return () => {
-      if (socket) {
-        socket.removeEventListener('message', handleSocketMessage);
-      }
+      console.log("Removing message listener.");
+      socket.removeEventListener('message', handleSocketMessage);
     };
-  }, [activeConversationId]);
+    
+  }, [socket, activeConversationId]);
 
   const truncateTitleFromMessage = useCallback((message) => {
     const max = 24
@@ -141,10 +177,10 @@ export function ChatProvider({ children }) {
     return (lastSpace > 0 ? slice.slice(0, lastSpace) : slice).trim() + '…'
   }, [])
 
-  const messages = useMemo(
-    () => messagesByConversation[activeConversationId] || [],
-    [messagesByConversation, activeConversationId]
-  )
+  const messages = useMemo(() => {
+      // ADD THIS LOG
+      return messagesByConversation[activeConversationId] || []
+    }, [messagesByConversation, activeConversationId])
 
   const sendMessage = useCallback((text) => {
     const userMessageId = crypto.randomUUID()
@@ -239,7 +275,6 @@ export function ChatProvider({ children }) {
         }
       }
     }
-
     const id = crypto.randomUUID()
     const title = 'New chat'
     const newConv = { id, title, lastMessage: '', updatedAt: Date.now() }
